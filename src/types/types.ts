@@ -40,7 +40,7 @@ export interface PortfolioForecastingProps {
 }
 
 interface TargetPortfolioProps extends PortfolioForecastingProps {
-  uuid: string | number;
+  uuid: string;
 }
 
 export interface Request_1031_Props {
@@ -59,7 +59,6 @@ export interface Request_1031_Props {
     new_prp_type: string;
     new_rentalGrowth: number;
     new_taxes: number;
-    new_taxRate: number;
     new_utils: number;
     new_vacancy: number;
   };
@@ -102,5 +101,103 @@ export interface ForecastingResponseObjectProps {
     loanBalance: number;
     costToSell: number;
     cashOutlay: number;
+  };
+}
+
+export type ComparisonResponseObjectProps = {
+  comparison: {
+    target_property: any;
+    refinanced_property: string;
+    "new-investemnt-id": string;
+    portfolios: {
+      name: string;
+      valuation: number;
+      equity: number;
+      NOI: number;
+      cashFlow: number;
+      LTV: number;
+      uuid: string;
+      arb: {
+        cashOnCash: number;
+        avarageCap: number;
+        rentMultiplier: number;
+        arbAppreciation: number;
+        arbDepreciation: number;
+        arbDownPayment: number;
+      };
+      properties: {
+        uid: string;
+        valuation: number;
+        loanBalance: number;
+        equity: number;
+        cashFlow: number;
+        NOI: number;
+        arb: {
+          cashOnCash: number;
+          avarageCap: number;
+          rentMultiplier: number;
+          arbAppreciation: number;
+          arbDepreciation: number;
+          arbDownPayment: number;
+        };
+        monthlyIncome: {
+          rent: number;
+          otherIncome: number;
+        };
+        monthlyExpenses: {
+          vacancy: number;
+          taxes: number;
+          insurance: number;
+          management: number;
+          hoa: number;
+          maintenance: number;
+          utils: number;
+          total: number;
+        };
+        loans: {
+          totalYears: number;
+          initialBalance: number;
+          currentBalance: number;
+          interestRate: number;
+          pmi: number;
+          extraPayments: number;
+          monthlyPayment: number;
+        };
+        assumptions: {
+          expenseInflation: number;
+          rentalGrowth: number;
+          appreciation: number;
+          maintenance: number;
+          vacancy: number;
+          management: number;
+        };
+        acquisition: {
+          totalCashOutlay: number;
+          purchasePrice: number;
+          closingCosts: number;
+          downPayment: number;
+        };
+      }[];
+    }[];
+  };
+};
+
+export interface AmortizationResponseProps {
+  amortization: {
+    month: number;
+    principal: number;
+    totalPayment: number;
+    interest: number;
+    totalInterest: number;
+    balance: number;
+  }[];
+  summary: {
+    numberOfPayments: number;
+    monthlyPayment: number;
+    interestPerMonth: number;
+    totalInterest: number;
+    totalPrincipal: number;
+    totalPaymentsSB: number;
+    totalPaymentsAMT: number;
   };
 }

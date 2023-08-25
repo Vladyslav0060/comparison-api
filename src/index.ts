@@ -2,14 +2,8 @@ import { Request_1031_Props } from "./types/types";
 import { start } from "./worker";
 
 export interface Env {
-  // Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
-  // MY_KV_NAMESPACE: KVNamespace;
-  //
-  // Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
-  // MY_DURABLE_OBJECT: DurableObjectNamespace;
-  //
-  // Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
-  // MY_BUCKET: R2Bucket;
+  FORECASTING_URL: string;
+  AMORTIZATION_URL: string;
 }
 
 async function fetch(request: Request, env: Env, ctx: ExecutionContext) {
@@ -18,7 +12,7 @@ async function fetch(request: Request, env: Env, ctx: ExecutionContext) {
       `Request was sent with "${request.method}" method, only "POST" allowed`
     );
   const body: Request_1031_Props = await request.json();
-  await start(body);
+  await start(body, env);
   return new Response(body.scenario_level);
 }
 
