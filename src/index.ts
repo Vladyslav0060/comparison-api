@@ -12,8 +12,11 @@ async function fetch(request: Request, env: Env, ctx: ExecutionContext) {
       `Request was sent with "${request.method}" method, only "POST" allowed`
     );
   const body: Request_1031_Props = await request.json();
-  await start(body, env);
-  return new Response(body.scenario_level);
+  const response = await start(body, env);
+  return new Response(JSON.stringify(response), {
+    headers: { "content-type": "application/json" },
+    status: 200,
+  });
 }
 
 export default {

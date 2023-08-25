@@ -94,7 +94,10 @@ const getForecastingRequestObject = (req: Request_1031_Props) => {
   }
 };
 
-export const start = async (req: Request_1031_Props, env: Env) => {
+export const start = async (
+  req: Request_1031_Props,
+  env: Env
+): Promise<any> => {
   const forecastingRequestObject: any = getForecastingRequestObject(req);
   let forecatingResponse: ForecastingResponseObjectProps[] = [];
   try {
@@ -542,8 +545,8 @@ export const start = async (req: Request_1031_Props, env: Env) => {
     //   forecastingRequestObject,
     //   forecatingResponse
     // );
-
     console.log(res.comparison);
+    return res;
   } catch (err) {
     console.log(err);
   }
