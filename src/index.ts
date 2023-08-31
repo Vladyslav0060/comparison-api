@@ -1,10 +1,6 @@
-import { Request_1031_Props } from "./types/types";
+import { startRefi } from "./refi";
+import { Request_1031_Props, Env } from "./types/types";
 import { start } from "./worker";
-
-export interface Env {
-  FORECASTING_URL: string;
-  AMORTIZATION_URL: string;
-}
 
 async function fetch(request: Request, env: Env, ctx: ExecutionContext) {
   if (request.method !== "POST")
@@ -12,7 +8,11 @@ async function fetch(request: Request, env: Env, ctx: ExecutionContext) {
       `Request was sent with "${request.method}" method, only "POST" allowed`
     );
   const body: Request_1031_Props = await request.json();
-  const response = await start(body, env);
+  console.log(body);
+  const response =
+    body.scenario_type === "1031"
+      ? await start(body, env)
+      : await startRefi(body, env);
   return new Response(JSON.stringify(response), {
     headers: { "content-type": "application/json" },
     status: 200,

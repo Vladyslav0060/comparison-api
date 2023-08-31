@@ -1,3 +1,8 @@
+export interface Env {
+  FORECASTING_URL: string;
+  AMORTIZATION_URL: string;
+}
+
 interface AllExpensesProps {
   propTaxes: number;
   insurance: number;
@@ -39,7 +44,7 @@ export interface PortfolioForecastingProps {
   costToSell: number;
 }
 
-interface TargetPortfolioProps extends PortfolioForecastingProps {
+export interface TargetPortfolioProps extends PortfolioForecastingProps {
   uuid: string;
 }
 

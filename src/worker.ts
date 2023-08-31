@@ -1,4 +1,4 @@
-import { Env } from ".";
+import { Env } from "./types/types";
 import {
   Request_1031_Props,
   ForecastingResponseObjectProps,
