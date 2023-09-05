@@ -4,10 +4,11 @@ import {
   ForecastingResponseObjectProps,
   Env,
   AmortizationResponseProps,
+  PortfolioForecastingProps,
 } from "./types/types";
 
-const getForecasting = async (req: Request_1031_Props, env: Env) => {
-  const forecastingRequestObject: any = getForecastingRequestObject(req);
+const getForecasting = async (forecastingRequestObject: any, env: Env) => {
+  // const forecastingRequestObject: any = getForecastingRequestObject(req);
   let forecatingResponse: ForecastingResponseObjectProps[] = [];
   try {
     const data = await fetch(env.FORECASTING_URL, {
@@ -46,10 +47,46 @@ const getAmortization = async (
   return amortizationResponse;
 };
 
+const getRefiAmortization = async (
+  req: PortfolioForecastingProps,
+  env: Env
+) => {
+  const params = new URLSearchParams({
+    amount: req.loans[0].loanBalance.toString(),
+    startingBalance: req.loans[0].startingBalance.toString(),
+    interestRate: (req.loans[0].interestRate * 100).toString(),
+    termInMonths: (req.loans[0].mortgageYears * 12).toString(),
+  });
+  const amortizationResponse: AmortizationResponseProps = await fetch(
+    `${env.AMORTIZATION_URL}/?${params}`
+  ).then((res) => res.json());
+  return amortizationResponse;
+};
+
+const getRefiForecasting = async (req: PortfolioForecastingProps, env: Env) => {
+  // const forecastingRequestObject: any = getForecastingRequestObject(req);
+  let forecatingResponse: ForecastingResponseObjectProps[] = [];
+  try {
+    const forecastingRequestObject: any = {
+      array: [req],
+    };
+    // console.log("forecastingRequestObject: ", forecastingRequestObject);
+    const data = await fetch(env.FORECASTING_URL, {
+      method: "POST",
+      body: JSON.stringify(forecastingRequestObject),
+    });
+
+    forecatingResponse =
+      (await data.json()) as ForecastingResponseObjectProps[];
+    return forecatingResponse;
+  } catch (error) {
+    console.error("❌ getForecasting REFI: ", error);
+    throw error;
+  }
+};
+
 const getAmortizationNonTarget = async (req: Request_1031_Props, env: Env) => {
-  const nonTargetPortfolios = req.target_portflio.filter(
-    (item) => item.uuid !== req.target_property
-  );
+  const nonTargetPortfolios = req.target_portflio;
 
   const fetchPromises = nonTargetPortfolios.map(async (portfolio) => {
     const { startingBalance, mortgageYears, interestRate, loanBalance } =
@@ -83,4 +120,10 @@ const getAmortizationNonTarget = async (req: Request_1031_Props, env: Env) => {
   return response;
 };
 
-export default { getForecasting, getAmortization, getAmortizationNonTarget };
+export {
+  getForecasting,
+  getAmortization,
+  getAmortizationNonTarget,
+  getRefiAmortization,
+  getRefiForecasting,
+};

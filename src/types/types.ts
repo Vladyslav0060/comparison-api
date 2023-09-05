@@ -109,6 +109,60 @@ export interface ForecastingResponseObjectProps {
   };
 }
 
+export type PropertiesProps = {
+  uid: string;
+  valuation: number;
+  loanBalance: number;
+  equity: number;
+  cashFlow: number;
+  NOI: number;
+  arb: {
+    cashOnCash: number;
+    avarageCap: number;
+    rentMultiplier: number;
+    arbAppreciation: number;
+    arbDepreciation: number;
+    arbDownPayment: number;
+  };
+  monthlyIncome: {
+    rent: number;
+    otherIncome: number;
+  };
+  monthlyExpenses: {
+    vacancy: number;
+    taxes: number;
+    insurance: number;
+    management: number;
+    hoa: number;
+    maintenance: number;
+    utils: number;
+    total: number;
+  };
+  loans: {
+    totalYears: number;
+    initialBalance: number;
+    currentBalance: number;
+    interestRate: number;
+    pmi: number;
+    extraPayments: number;
+    monthlyPayment: number;
+  };
+  assumptions: {
+    expenseInflation: number;
+    rentalGrowth: number;
+    appreciation: number;
+    maintenance: number;
+    vacancy: number;
+    management: number;
+  };
+  acquisition: {
+    totalCashOutlay: number;
+    purchasePrice: number;
+    closingCosts: number;
+    downPayment: number;
+  };
+};
+
 export type ComparisonResponseObjectProps = {
   comparison: {
     target_property: any;
@@ -130,59 +184,7 @@ export type ComparisonResponseObjectProps = {
         arbDepreciation: number;
         arbDownPayment: number;
       };
-      properties: {
-        uid: string;
-        valuation: number;
-        loanBalance: number;
-        equity: number;
-        cashFlow: number;
-        NOI: number;
-        arb: {
-          cashOnCash: number;
-          avarageCap: number;
-          rentMultiplier: number;
-          arbAppreciation: number;
-          arbDepreciation: number;
-          arbDownPayment: number;
-        };
-        monthlyIncome: {
-          rent: number;
-          otherIncome: number;
-        };
-        monthlyExpenses: {
-          vacancy: number;
-          taxes: number;
-          insurance: number;
-          management: number;
-          hoa: number;
-          maintenance: number;
-          utils: number;
-          total: number;
-        };
-        loans: {
-          totalYears: number;
-          initialBalance: number;
-          currentBalance: number;
-          interestRate: number;
-          pmi: number;
-          extraPayments: number;
-          monthlyPayment: number;
-        };
-        assumptions: {
-          expenseInflation: number;
-          rentalGrowth: number;
-          appreciation: number;
-          maintenance: number;
-          vacancy: number;
-          management: number;
-        };
-        acquisition: {
-          totalCashOutlay: number;
-          purchasePrice: number;
-          closingCosts: number;
-          downPayment: number;
-        };
-      }[];
+      properties: PropertiesProps[];
     }[];
   };
 };
