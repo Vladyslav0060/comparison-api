@@ -13,7 +13,7 @@ async function fetch(request: Request, env: Env, ctx: ExecutionContext) {
       body.scenario_type === "1031"
         ? await start(body, env)
         : await startRefi(body, env);
-    console.log("1", response);
+    console.log("response: ", response);
     return new Response(JSON.stringify(response), {
       headers: { "content-type": "application/json" },
       status: 200,

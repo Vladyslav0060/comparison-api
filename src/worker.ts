@@ -3,21 +3,32 @@ import {
   getAmortizationNonTarget,
   getForecasting,
 } from "./api";
-import { Env } from "./types/types";
+import {
+  AmortizationNonTargetType,
+  AmortizationResponseProps,
+  Env,
+  PortfolioProps,
+  PortfolioResponseProps,
+  PropertiesProps,
+} from "./types/types";
 import {
   Request_1031_Props,
   ComparisonResponseObjectProps,
 } from "./types/types";
-import { getPortfolioObject, getForecastingRequestObject } from "./utils";
+import { getPortfolioObject, getForecastingRequestObjects } from "./utils";
 
 const getTempVariables = (req: Request_1031_Props) => {
-  const { target_property } = req;
-  const object = req.target_portflio.find(
-    (item) => item.uuid === target_property
+  const targetPortfolio = req.portfolios.find(
+    (item) => item.id === req.target_portfolio
   );
-  if (!object) throw new Error("Object with this uuid is not found");
+  if (!targetPortfolio)
+    throw new Error("Portfolio with this uuid is not found");
+  const targetProperty = targetPortfolio.properties.find(
+    (p) => p.uuid === req.target_property
+  );
+  if (!targetProperty) throw new Error("Property with this uuid is not found");
   const available_equity =
-    object.currentValue - object.loans[0].startingBalance;
+    targetProperty.currentValue - targetProperty.loans[0].startingBalance;
   const mothlyNOI =
     (available_equity * req.new_caprate) / 12 / req.new_downpaymment;
   const monthly_rents = mothlyNOI / (1 - req.default_values.new_expenseRatio);
@@ -26,466 +37,381 @@ const getTempVariables = (req: Request_1031_Props) => {
   return { available_equity, mothlyNOI, monthly_rents, valuation };
 };
 
+const getPortolioPropertiesObjects = (
+  req: Request_1031_Props,
+  portfolio: PortfolioProps,
+  amortizationResponseNonTarget: AmortizationNonTargetType,
+  targetAmortization: AmortizationResponseProps | undefined,
+  forecasting: any[]
+) => {
+  const isTargetPortfolio = portfolio.id === req.target_portfolio;
+  const { available_equity, monthly_rents, mothlyNOI, valuation } =
+    getTempVariables(req);
+  let result: PropertiesProps[];
+  result = portfolio.properties.flatMap((property) => {
+    const isTargetProperty = property.uuid === req.target_property;
+    if (isTargetProperty && isTargetPortfolio) {
+      return (() => {
+        const propertyForecasting = Object.values(
+          forecasting.find((f) => Object.keys(f)[0] === property.uuid)
+        )[0];
+        const allExpensesSum = Object.values(property.allExpenses).reduce(
+          (acc, item) => acc + item,
+          0
+        );
+        const noi =
+          property.uuid === req.target_property
+            ? mothlyNOI * 12
+            : (property.avgRent +
+                property.otherIncome -
+                allExpensesSum -
+                property.vacancyLossPercentage *
+                  (property.avgRent + property.otherIncome)) *
+              12;
+        const temp_non_target = amortizationResponseNonTarget[property.uuid];
+
+        const cashflow =
+          property.uuid === req.target_property
+            ? (mothlyNOI - targetAmortization.summary.monthlyPayment) * 12
+            : noi - temp_non_target.summary.monthlyPayment * 12;
+
+        const closingcosts =
+          property.uuid === req.target_property
+            ? (req.default_values.new_closingCosts / req.new_downpaymment) *
+              available_equity
+            : property.closingCosts;
+
+        const downpayment =
+          property.uuid === req.target_property
+            ? available_equity
+            : property.downPaymentPerc * property.purchasePrice;
+
+        const totalcashoutlay =
+          property.uuid === req.target_property
+            ? downpayment + closingcosts
+            : downpayment + closingcosts + property.repairCosts;
+
+        const local_valuation =
+          property.uuid === req.target_property
+            ? valuation
+            : property.currentValue;
+        return {
+          //1
+          // type: "target",
+          uid: property.uuid,
+          valuation: local_valuation,
+          loanBalance: local_valuation - available_equity,
+          equity: available_equity,
+          cashFlow: cashflow,
+          NOI: noi,
+          arb: {
+            cashOnCash: (cashflow / totalcashoutlay) * 100,
+            avarageCap: (noi / local_valuation) * 100,
+            rentMultiplier: local_valuation / (monthly_rents * 12),
+            arbAppreciation:
+              local_valuation * req.default_values.new_appreciation,
+            arbDepreciation:
+              ((local_valuation * 0.85) / 27.5) * property.taxRate,
+            arbDownPayment:
+              propertyForecasting[0].cumulativeAppreciations.mortgagePaydown,
+            // forecatingResponse[0].cumulativeAppreciations.mortgagePaydown,
+          },
+          monthlyIncome: {
+            rent: monthly_rents,
+            otherIncome: 0,
+          },
+          monthlyExpenses: (() => {
+            const vacancy = monthly_rents * req.default_values.new_vacancy;
+            const taxes = monthly_rents * req.default_values.new_taxes;
+            const insurance = monthly_rents * req.default_values.new_insurance;
+            const management =
+              monthly_rents * req.default_values.new_management;
+            const hoa = monthly_rents * req.default_values.new_hoa;
+            const maintenance =
+              monthly_rents * req.default_values.new_maintenance;
+            const utils = monthly_rents * req.default_values.new_utils;
+            const total =
+              vacancy +
+              taxes +
+              insurance +
+              management +
+              hoa +
+              maintenance +
+              utils;
+            return {
+              vacancy: vacancy,
+              taxes: taxes,
+              insurance: insurance,
+              management: management,
+              hoa: hoa,
+              maintenance: maintenance,
+              utils: utils,
+              total: total,
+            };
+          })(),
+          loans: {
+            totalYears: property.loans.reduce((maxYears, loan) => {
+              return Math.max(maxYears, loan.mortgageYears);
+            }, 0),
+            initialBalance:
+              available_equity / req.new_downpaymment - available_equity,
+            currentBalance:
+              available_equity / req.new_downpaymment - available_equity,
+            interestRate: req.new_loan_interest_rate,
+            pmi: 0,
+            extraPayments: 0,
+            monthlyPayment: targetAmortization.summary.monthlyPayment,
+          },
+          assumptions: {
+            expenseInflation: req.default_values.new_expensInflation,
+            rentalGrowth: req.default_values.new_rentalGrowth,
+            appreciation: req.default_values.new_appreciation,
+            maintenance: req.default_values.new_maintenance,
+            vacancy: req.default_values.new_vacancy,
+            management: req.default_values.new_management,
+          },
+          acquisition: {
+            totalCashOutlay: totalcashoutlay,
+            purchasePrice: local_valuation,
+            closingCosts: closingcosts,
+            downPayment: downpayment,
+          },
+          picture: "",
+          ROE: 0,
+        };
+      })();
+    } else
+      return (() => {
+        const propertyForecasting = Object.values(
+          forecasting.find((f) => Object.keys(f)[0] === property.uuid)
+        )[0];
+        const allExpensesSum = Object.values(property.allExpenses).reduce(
+          (acc, item) => acc + item,
+          0
+        );
+
+        const noi =
+          (property.avgRent +
+            property.otherIncome -
+            allExpensesSum -
+            property.vacancyLossPercentage *
+              (property.avgRent + property.otherIncome)) *
+          12;
+        const temp_non_target = amortizationResponseNonTarget[property.uuid];
+        const cashflow = noi - temp_non_target.summary.monthlyPayment * 12;
+
+        const closingcosts = property.closingCosts;
+        const downpayment = property.downPaymentPerc * property.purchasePrice;
+        const totalcashoutlay =
+          downpayment + closingcosts + property.repairCosts;
+        const local_valuation = property.currentValue;
+        return {
+          //1
+          // type: "non-target",
+          uid: property.uuid,
+          valuation: property.currentValue,
+          loanBalance: property.loans.reduce(
+            (acc, item) => acc + item.loanBalance,
+            0
+          ),
+          equity:
+            property.currentValue -
+            property.loans.reduce((acc, item) => acc + item.loanBalance, 0),
+          cashFlow: cashflow,
+          NOI: noi,
+          arb: {
+            cashOnCash: (cashflow / totalcashoutlay) * 100,
+            avarageCap: (noi / property.currentValue) * 100,
+            rentMultiplier:
+              local_valuation /
+              (property.avgRent * 12 + property.otherIncome * 12),
+            arbAppreciation: local_valuation * property.annualAppreciationRate,
+            arbDepreciation:
+              ((property.purchasePrice * 0.85) / 27.5) * property.taxRate,
+            arbDownPayment:
+              propertyForecasting[0].cumulativeAppreciations.mortgagePaydown,
+          },
+          monthlyIncome: {
+            rent: property.avgRent,
+            otherIncome: property.otherIncome,
+          },
+          monthlyExpenses: (() => {
+            const { avgRent, vacancyLossPercentage } = property;
+            const { propTaxes, capEx, hoa, insurance, propManage, utils } =
+              property.allExpenses;
+            const vacancy = avgRent * vacancyLossPercentage;
+            const total =
+              vacancy +
+              propTaxes +
+              insurance +
+              propManage +
+              hoa +
+              capEx +
+              propManage +
+              utils;
+            return {
+              vacancy: vacancy,
+              taxes: propTaxes,
+              insurance: insurance,
+              management: propManage,
+              hoa: hoa,
+              maintenance: capEx,
+              utils: utils,
+              total: total,
+            };
+          })(),
+          loans: {
+            totalYears: property.loans[0].mortgageYears,
+            initialBalance: property.loans[0].loanBalance,
+            currentBalance: property.loans[0].startingBalance,
+            interestRate: property.loans[0].interestRate,
+            pmi: 0,
+            extraPayments: property.loans[0].extraPayement,
+            monthlyPayment:
+              amortizationResponseNonTarget[property.uuid]?.summary
+                .monthlyPayment,
+          },
+          assumptions: {
+            expenseInflation: property.annualOperatingExpenseIncrease,
+            rentalGrowth: property.annualRevenueIncrease,
+            appreciation: property.annualAppreciationRate,
+            maintenance: property.allExpenses.capEx / property.avgRent,
+            vacancy: property.vacancyLossPercentage,
+            management: property.allExpenses.propManage / property.avgRent,
+          },
+          acquisition: {
+            totalCashOutlay: totalcashoutlay,
+            purchasePrice: property.purchasePrice,
+            closingCosts: property.closingCosts,
+            downPayment: property.downPaymentPerc * property.purchasePrice,
+          },
+          picture: property.picture,
+          ROE: 0,
+        };
+      })();
+  });
+  return result;
+};
+
+const buildPortfolioResponse = (
+  properties: PropertiesProps[],
+  portfolio_id: string
+): PortfolioResponseProps => {
+  const { valuationSum, equitySum, loanBalancesSum, noiSum, cashflowSum } =
+    properties.reduce(
+      (acc, item) => {
+        return {
+          valuationSum: item.valuation + acc.valuationSum,
+          equitySum: item.equity + acc.equitySum,
+          noiSum: item.NOI + acc.noiSum,
+          loanBalancesSum: item.loanBalance + acc.loanBalancesSum,
+          cashflowSum: item.cashFlow + acc.cashflowSum,
+        };
+      },
+      {
+        valuationSum: 0,
+        equitySum: 0,
+        loanBalancesSum: 0,
+        noiSum: 0,
+        cashflowSum: 0,
+      }
+    );
+  return {
+    name: portfolio_id,
+    cashFlow: cashflowSum,
+    arb: {
+      arbAppreciation: properties.reduce((acc, item) => {
+        return item.arb.arbAppreciation + acc;
+      }, 0),
+      arbDepreciation: properties.reduce((acc, item) => {
+        return item.arb.arbDepreciation + acc;
+      }, 0),
+      arbDownPayment: properties.reduce((acc, item) => {
+        return item.arb.arbDownPayment + acc;
+      }, 0),
+      avarageCap:
+        properties.reduce((acc, item) => {
+          return item.arb.avarageCap + acc;
+        }, 0) / properties.length,
+      cashOnCash:
+        properties.reduce((acc, item) => {
+          return item.arb.cashOnCash + acc;
+        }, 0) / properties.length,
+      rentMultiplier:
+        properties.reduce((acc, item) => {
+          return item.arb.rentMultiplier + acc;
+        }, 0) / properties.length,
+    },
+    equity: equitySum,
+    LTV: (loanBalancesSum / valuationSum) * 100,
+    NOI: noiSum,
+    uuid: portfolio_id,
+    valuation: valuationSum,
+    properties: properties,
+  };
+};
+
+const getPortfolioResponse = (
+  req: Request_1031_Props,
+  portfolio: PortfolioProps,
+  amortizationResponseNonTarget: AmortizationNonTargetType,
+  targetAmortization: AmortizationResponseProps | undefined,
+  forecasting: any[]
+) => {
+  const portfolioPropertiesResponse = getPortolioPropertiesObjects(
+    req,
+    portfolio,
+    amortizationResponseNonTarget,
+    targetAmortization,
+    forecasting
+  );
+  const portfolio_res = buildPortfolioResponse(
+    portfolioPropertiesResponse,
+    portfolio.id
+  );
+  return portfolio_res;
+};
+
 export const start = async (
   req: Request_1031_Props,
   env: Env
 ): Promise<any> => {
   try {
-    const forecastingRequestObject: any = getForecastingRequestObject(req);
-    const forecatingResponse = await getForecasting(
-      forecastingRequestObject,
-      env
+    const targetAmortization = await getAmortization(req, env);
+    const portfolios = await Promise.all(
+      req.portfolios.map(async (portfolio, idx = 0) => {
+        const forecastingRequestObjects = await getForecastingRequestObjects(
+          req,
+          portfolio
+        );
+        if (!forecastingRequestObjects) return;
+        const forecatingResponse = await getForecasting(
+          forecastingRequestObjects,
+          env
+        );
+        const amortizationResponseNonTarget: AmortizationNonTargetType =
+          await getAmortizationNonTarget(portfolio, env);
+        const portfolio_res = getPortfolioResponse(
+          req,
+          portfolio,
+          amortizationResponseNonTarget,
+          targetAmortization,
+          forecatingResponse
+        );
+        return portfolio_res;
+      })
     );
-
-    const amortizationResponseNonTarget = await getAmortizationNonTarget(
-      req,
-      env
-    );
-    const amortizationResponse = await getAmortization(req, env);
-    const { available_equity, monthly_rents, mothlyNOI, valuation } =
-      getTempVariables(req);
-
-    const res: ComparisonResponseObjectProps = {
+    const response: ComparisonResponseObjectProps = {
       comparison: {
-        target_property: forecastingRequestObject.array[0].uuid,
-        refinanced_property: forecastingRequestObject.array[0].uuid,
-        "new-investemnt-id": forecastingRequestObject.array[0].uuid,
-        portfolios: [
-          {
-            name: "portfolio_before_scenario",
-            cashFlow: 0,
-            arb: {
-              arbAppreciation: 0,
-              arbDepreciation: 0,
-              arbDownPayment: 0,
-              avarageCap: 0,
-              cashOnCash: 0,
-              rentMultiplier: 0,
-            },
-            equity: 0,
-            LTV: 0,
-            NOI: 0,
-            uuid: req.target_property,
-            valuation: 0,
-            properties: req.target_portflio.map((item) => {
-              const allExpensesSum = Object.values(item.allExpenses).reduce(
-                (acc, item) => acc + item,
-                0
-              );
-
-              const noi =
-                (item.avgRent +
-                  item.otherIncome -
-                  allExpensesSum -
-                  item.vacancyLossPercentage *
-                    (item.avgRent + item.otherIncome)) *
-                12;
-
-              const temp_non_target =
-                amortizationResponseNonTarget[item.uuid] ||
-                amortizationResponse;
-
-              const cashflow =
-                noi - temp_non_target.summary.monthlyPayment * 12;
-
-              const closingcosts = item.closingCosts;
-              const downpayment = item.downPaymentPerc * item.purchasePrice;
-              const totalcashoutlay =
-                downpayment + closingcosts + item.repairCosts;
-              const local_valuation = item.currentValue;
-
-              return {
-                // non-target
-                uid: item.uuid,
-                valuation: item.currentValue,
-                loanBalance: item.loans.reduce(
-                  (acc, item) => acc + item.loanBalance,
-                  0
-                ),
-                equity:
-                  item.currentValue -
-                  item.loans.reduce((acc, item) => acc + item.loanBalance, 0),
-                cashFlow: cashflow,
-                NOI: noi,
-                arb: {
-                  cashOnCash: (cashflow / totalcashoutlay) * 100,
-                  avarageCap: (noi / item.currentValue) * 100,
-                  rentMultiplier:
-                    local_valuation /
-                    (item.avgRent * 12 + item.otherIncome * 12),
-                  arbAppreciation:
-                    local_valuation * item.annualAppreciationRate,
-                  arbDepreciation:
-                    ((item.purchasePrice * 0.85) / 27.5) * item.taxRate,
-                  arbDownPayment:
-                    forecatingResponse[0].cumulativeAppreciations
-                      .mortgagePaydown,
-                },
-                monthlyIncome: {
-                  rent: item.avgRent,
-                  otherIncome: item.otherIncome,
-                },
-                monthlyExpenses: (() => {
-                  const { avgRent, vacancyLossPercentage } = item;
-                  const {
-                    propTaxes,
-                    capEx,
-                    hoa,
-                    insurance,
-                    propManage,
-                    utils,
-                  } = item.allExpenses;
-                  const vacancy = avgRent * vacancyLossPercentage;
-                  const total =
-                    vacancy +
-                    propTaxes +
-                    insurance +
-                    propManage +
-                    hoa +
-                    capEx +
-                    propManage +
-                    utils;
-                  return {
-                    vacancy: vacancy,
-                    taxes: propTaxes,
-                    insurance: insurance,
-                    management: propManage,
-                    hoa: hoa,
-                    maintenance: capEx,
-                    utils: utils,
-                    total: total,
-                  };
-                })(),
-                loans: {
-                  totalYears: item.loans[0].mortgageYears,
-                  initialBalance: item.loans[0].loanBalance,
-                  currentBalance: item.loans[0].startingBalance,
-                  interestRate: item.loans[0].interestRate,
-                  pmi: 0,
-                  extraPayments: item.loans[0].extraPayement,
-                  monthlyPayment:
-                    amortizationResponseNonTarget[item.uuid]?.summary
-                      .monthlyPayment ||
-                    amortizationResponse[item.uuid]?.summary.monthlyPayment,
-                },
-                assumptions: {
-                  expenseInflation: item.annualOperatingExpenseIncrease,
-                  rentalGrowth: item.annualRevenueIncrease,
-                  appreciation: item.annualAppreciationRate,
-                  maintenance: item.allExpenses.capEx / item.avgRent,
-                  vacancy: item.vacancyLossPercentage,
-                  management: item.allExpenses.propManage / item.avgRent,
-                },
-                acquisition: {
-                  totalCashOutlay: totalcashoutlay,
-                  purchasePrice: item.purchasePrice,
-                  closingCosts: item.closingCosts,
-                  downPayment: item.downPaymentPerc * item.purchasePrice,
-                },
-              };
-            }),
-          },
-          {
-            name: "portfolio_after_scenario",
-            cashFlow: mothlyNOI * 12,
-            arb: {
-              arbAppreciation: 0,
-              arbDepreciation: 0,
-              arbDownPayment: 0,
-              avarageCap: 0,
-              cashOnCash: 9,
-              rentMultiplier: 0,
-            },
-            equity: 0,
-            LTV: 0,
-            NOI: 0,
-            uuid: req.target_property,
-            valuation: 0,
-            properties: req.target_portflio.map((item) => {
-              const allExpensesSum = Object.values(item.allExpenses).reduce(
-                (acc, item) => acc + item,
-                0
-              );
-
-              const noi =
-                item.uuid === req.target_property
-                  ? mothlyNOI * 12
-                  : (item.avgRent +
-                      item.otherIncome -
-                      allExpensesSum -
-                      item.vacancyLossPercentage *
-                        (item.avgRent + item.otherIncome)) *
-                    12;
-              const temp_non_target = amortizationResponseNonTarget[item.uuid];
-
-              const cashflow =
-                item.uuid === req.target_property
-                  ? (mothlyNOI - amortizationResponse.summary.monthlyPayment) *
-                    12
-                  : noi - temp_non_target.summary.monthlyPayment * 12;
-
-              const closingcosts =
-                item.uuid === req.target_property
-                  ? (req.default_values.new_closingCosts /
-                      req.new_downpaymment) *
-                    available_equity
-                  : item.closingCosts;
-              const downpayment =
-                item.uuid === req.target_property
-                  ? available_equity
-                  : item.downPaymentPerc * item.purchasePrice;
-              const totalcashoutlay =
-                item.uuid === req.target_property
-                  ? downpayment + closingcosts
-                  : downpayment + closingcosts + item.repairCosts;
-              const local_valuation =
-                item.uuid === req.target_property
-                  ? valuation
-                  : item.currentValue;
-              // const totalcashoutlay = item.uuid === req.target_property ?
-              return item.uuid === req.target_property
-                ? {
-                    // target
-                    uid: "new-investment",
-                    valuation: local_valuation,
-                    loanBalance: local_valuation - available_equity,
-                    equity: available_equity,
-                    cashFlow: cashflow,
-                    NOI: noi,
-                    arb: {
-                      cashOnCash: (cashflow / totalcashoutlay) * 100,
-                      avarageCap: (noi / local_valuation) * 100,
-                      rentMultiplier: local_valuation / (monthly_rents * 12),
-                      arbAppreciation:
-                        local_valuation * req.default_values.new_appreciation,
-                      arbDepreciation:
-                        ((local_valuation * 0.85) / 27.5) * item.taxRate,
-                      arbDownPayment:
-                        forecatingResponse[0].cumulativeAppreciations
-                          .mortgagePaydown,
-                    },
-                    monthlyIncome: {
-                      rent: monthly_rents,
-                      otherIncome: 0,
-                    },
-                    monthlyExpenses: (() => {
-                      const vacancy =
-                        monthly_rents * req.default_values.new_vacancy;
-                      const taxes =
-                        monthly_rents * req.default_values.new_taxes;
-                      const insurance =
-                        monthly_rents * req.default_values.new_insurance;
-                      const management =
-                        monthly_rents * req.default_values.new_management;
-                      const hoa = monthly_rents * req.default_values.new_hoa;
-                      const maintenance =
-                        monthly_rents * req.default_values.new_maintenance;
-                      const utils =
-                        monthly_rents * req.default_values.new_utils;
-                      const total =
-                        vacancy +
-                        taxes +
-                        insurance +
-                        management +
-                        hoa +
-                        maintenance +
-                        utils;
-                      return {
-                        vacancy: vacancy,
-                        taxes: taxes,
-                        insurance: insurance,
-                        management: management,
-                        hoa: hoa,
-                        maintenance: maintenance,
-                        utils: utils,
-                        total: total,
-                      };
-                    })(),
-                    loans: {
-                      totalYears: item.loans.reduce((maxYears, loan) => {
-                        return Math.max(maxYears, loan.mortgageYears);
-                      }, 0),
-                      initialBalance:
-                        available_equity / req.new_downpaymment -
-                        available_equity,
-                      currentBalance:
-                        available_equity / req.new_downpaymment -
-                        available_equity,
-                      interestRate: req.new_loan_interest_rate,
-                      pmi: 0,
-                      extraPayments: 0,
-                      monthlyPayment:
-                        amortizationResponse.summary.monthlyPayment,
-                    },
-                    assumptions: {
-                      expenseInflation: req.default_values.new_expensInflation,
-                      rentalGrowth: req.default_values.new_rentalGrowth,
-                      appreciation: req.default_values.new_appreciation,
-                      maintenance: req.default_values.new_maintenance,
-                      vacancy: req.default_values.new_vacancy,
-                      management: req.default_values.new_management,
-                    },
-                    acquisition: {
-                      totalCashOutlay: totalcashoutlay,
-                      purchasePrice: local_valuation,
-                      closingCosts: closingcosts,
-                      downPayment: downpayment,
-                    },
-                  }
-                : {
-                    // non-target
-                    uid: item.uuid,
-                    valuation: item.currentValue,
-                    loanBalance: item.loans.reduce(
-                      (acc, item) => acc + item.loanBalance,
-                      0
-                    ),
-                    equity:
-                      item.currentValue -
-                      item.loans.reduce(
-                        (acc, item) => acc + item.loanBalance,
-                        0
-                      ),
-                    cashFlow: cashflow,
-                    NOI: noi,
-                    arb: {
-                      cashOnCash: (cashflow / totalcashoutlay) * 100,
-                      avarageCap: (noi / item.currentValue) * 100,
-                      rentMultiplier:
-                        local_valuation /
-                        (item.avgRent * 12 + item.otherIncome * 12),
-                      arbAppreciation:
-                        local_valuation * item.annualAppreciationRate,
-                      arbDepreciation:
-                        ((item.purchasePrice * 0.85) / 27.5) * item.taxRate,
-                      arbDownPayment:
-                        forecatingResponse[0].cumulativeAppreciations
-                          .mortgagePaydown,
-                    },
-                    monthlyIncome: {
-                      rent: item.avgRent,
-                      otherIncome: item.otherIncome,
-                    },
-                    monthlyExpenses: (() => {
-                      const { avgRent, vacancyLossPercentage } = item;
-                      const {
-                        propTaxes,
-                        capEx,
-                        hoa,
-                        insurance,
-                        propManage,
-                        utils,
-                      } = item.allExpenses;
-                      const vacancy = avgRent * vacancyLossPercentage;
-                      const total =
-                        vacancy +
-                        propTaxes +
-                        insurance +
-                        propManage +
-                        hoa +
-                        capEx +
-                        propManage +
-                        utils;
-                      return {
-                        vacancy: vacancy,
-                        taxes: propTaxes,
-                        insurance: insurance,
-                        management: propManage,
-                        hoa: hoa,
-                        maintenance: capEx,
-                        utils: utils,
-                        total: total,
-                      };
-                    })(),
-                    loans: {
-                      totalYears: item.loans[0].mortgageYears,
-                      initialBalance: item.loans[0].loanBalance,
-                      currentBalance: item.loans[0].startingBalance,
-                      interestRate: item.loans[0].interestRate,
-                      pmi: 0,
-                      extraPayments: item.loans[0].extraPayement,
-                      monthlyPayment:
-                        amortizationResponseNonTarget[item.uuid].summary
-                          .monthlyPayment,
-                    },
-                    assumptions: {
-                      expenseInflation: item.annualOperatingExpenseIncrease,
-                      rentalGrowth: item.annualRevenueIncrease,
-                      appreciation: item.annualAppreciationRate,
-                      maintenance: item.allExpenses.capEx / item.avgRent,
-                      vacancy: item.vacancyLossPercentage,
-                      management: item.allExpenses.propManage / item.avgRent,
-                    },
-                    acquisition: {
-                      totalCashOutlay: totalcashoutlay,
-                      purchasePrice: item.purchasePrice,
-                      closingCosts: item.closingCosts,
-                      downPayment: item.downPaymentPerc * item.purchasePrice,
-                    },
-                  };
-            }),
-          },
-        ],
+        "new-investemnt-id": req.target_property,
+        target_property: req.target_property,
+        refinanced_property: req.target_property,
+        portfolios: portfolios,
       },
     };
 
-    res.comparison.portfolios.forEach((portfolio) => {
-      const { valuationSum, equitySum, loanBalancesSum, noiSum, cashflowSum } =
-        portfolio.properties.reduce(
-          (acc, item) => {
-            return {
-              valuationSum: item.valuation + acc.valuationSum,
-              equitySum: item.equity + acc.equitySum,
-              noiSum: item.NOI + acc.noiSum,
-              loanBalancesSum: item.loanBalance + acc.loanBalancesSum,
-              cashflowSum: item.cashFlow + acc.cashflowSum,
-            };
-          },
-          {
-            valuationSum: 0,
-            equitySum: 0,
-            loanBalancesSum: 0,
-            noiSum: 0,
-            cashflowSum: 0,
-          }
-        );
-      portfolio.valuation = valuationSum;
-      portfolio.equity = equitySum;
-      portfolio.NOI = noiSum;
-      portfolio.cashFlow = cashflowSum;
-      portfolio.LTV = (loanBalancesSum / valuationSum) * 100;
-      portfolio.arb = {
-        cashOnCash:
-          portfolio.properties.reduce((acc, item) => {
-            return item.arb.cashOnCash + acc;
-          }, 0) / portfolio.properties.length,
-        avarageCap:
-          portfolio.properties.reduce((acc, item) => {
-            return item.arb.avarageCap + acc;
-          }, 0) / portfolio.properties.length,
-        rentMultiplier:
-          portfolio.properties.reduce((acc, item) => {
-            return item.arb.rentMultiplier + acc;
-          }, 0) / portfolio.properties.length,
-        arbAppreciation: portfolio.properties.reduce((acc, item) => {
-          return item.arb.arbAppreciation + acc;
-        }, 0),
-        arbDepreciation: portfolio.properties.reduce((acc, item) => {
-          return item.arb.arbDepreciation + acc;
-        }, 0),
-        arbDownPayment: portfolio.properties.reduce((acc, item) => {
-          return item.arb.arbDownPayment + acc;
-        }, 0),
-      };
-    });
-
-    // const res = getComparisonResponseObject(
-    //   forecastingRequestObject,
-    //   forecatingResponse
-    // );
-    console.log(res.comparison);
-    return res;
+    return response;
   } catch (err) {
-    console.log(err);
+    console.error(err);
   }
 };

@@ -15,7 +15,7 @@ import {
   TargetPortfolioProps,
   PortfolioForecastingProps,
 } from "../types/types";
-import { getForecastingRequestObject } from "../utils";
+import { getForecastingRequestObjects } from "../utils";
 
 type TempVarsProps = {
   available_equity: number;
@@ -43,6 +43,251 @@ const temp_vars = (
     throw error;
   }
 };
+
+// const getPortolioResponseObjects = (
+//   req: Request_1031_Props,
+//   portfolio: PortfolioProps,
+//   amortizationResponseNonTarget: AmortizationNonTargetType,
+//   targetAmortization: AmortizationResponseProps | undefined
+// ) => {
+//   const isTargetPortfolio = portfolio.id === req.target_portfolio;
+//   const { available_equity, monthly_rents, mothlyNOI, valuation } =
+//     getTempVariables(req);
+//   let result: PropertiesProps[];
+//   result = portfolio.properties.flatMap((property) => {
+//     const isTargetProperty = property.uuid === req.target_property;
+//     return isTargetPortfolio && isTargetProperty
+//       ? [
+//           (() => {
+//             const allExpensesSum = Object.values(property.allExpenses).reduce(
+//               (acc, item) => acc + item,
+//               0
+//             );
+
+//             const noi =
+//               (property.avgRent +
+//                 property.otherIncome -
+//                 allExpensesSum -
+//                 property.vacancyLossPercentage *
+//                   (property.avgRent + property.otherIncome)) *
+//               12;
+//             const temp_non_target =
+//               amortizationResponseNonTarget[property.uuid];
+//             const cashflow = noi - temp_non_target.summary.monthlyPayment * 12;
+
+//             const closingcosts = property.closingCosts;
+//             const downpayment =
+//               property.downPaymentPerc * property.purchasePrice;
+//             const totalcashoutlay =
+//               downpayment + closingcosts + property.repairCosts;
+//             const local_valuation = property.currentValue;
+//             return {
+//               //1
+//               type: "target",
+//               uid: property.uuid,
+//               valuation: property.currentValue,
+//               loanBalance: property.loans.reduce(
+//                 (acc, item) => acc + item.loanBalance,
+//                 0
+//               ),
+//               equity:
+//                 property.currentValue -
+//                 property.loans.reduce((acc, item) => acc + item.loanBalance, 0),
+//               cashFlow: cashflow,
+//               NOI: noi,
+//               arb: {
+//                 cashOnCash: (cashflow / totalcashoutlay) * 100,
+//                 avarageCap: (noi / property.currentValue) * 100,
+//                 rentMultiplier:
+//                   local_valuation /
+//                   (property.avgRent * 12 + property.otherIncome * 12),
+//                 arbAppreciation:
+//                   local_valuation * property.annualAppreciationRate,
+//                 arbDepreciation:
+//                   ((property.purchasePrice * 0.85) / 27.5) * property.taxRate,
+//                 arbDownPayment: 0,
+//                 // forecatingResponse[0].cumulativeAppreciations.mortgagePaydown,
+//               },
+//               monthlyIncome: {
+//                 rent: property.avgRent,
+//                 otherIncome: property.otherIncome,
+//               },
+//               monthlyExpenses: (() => {
+//                 const { avgRent, vacancyLossPercentage } = property;
+//                 const { propTaxes, capEx, hoa, insurance, propManage, utils } =
+//                   property.allExpenses;
+//                 const vacancy = avgRent * vacancyLossPercentage;
+//                 const total =
+//                   vacancy +
+//                   propTaxes +
+//                   insurance +
+//                   propManage +
+//                   hoa +
+//                   capEx +
+//                   propManage +
+//                   utils;
+//                 return {
+//                   vacancy: vacancy,
+//                   taxes: propTaxes,
+//                   insurance: insurance,
+//                   management: propManage,
+//                   hoa: hoa,
+//                   maintenance: capEx,
+//                   utils: utils,
+//                   total: total,
+//                 };
+//               })(),
+//               loans: {
+//                 totalYears: property.loans[0].mortgageYears,
+//                 initialBalance: property.loans[0].loanBalance,
+//                 currentBalance: property.loans[0].startingBalance,
+//                 interestRate: property.loans[0].interestRate,
+//                 pmi: 0,
+//                 extraPayments: property.loans[0].extraPayement,
+//                 monthlyPayment:
+//                   amortizationResponseNonTarget[property.uuid]?.summary
+//                     .monthlyPayment,
+//               },
+//               assumptions: {
+//                 expenseInflation: property.annualOperatingExpenseIncrease,
+//                 rentalGrowth: property.annualRevenueIncrease,
+//                 appreciation: property.annualAppreciationRate,
+//                 maintenance: property.allExpenses.capEx / property.avgRent,
+//                 vacancy: property.vacancyLossPercentage,
+//                 management: property.allExpenses.propManage / property.avgRent,
+//               },
+//               acquisition: {
+//                 totalCashOutlay: totalcashoutlay,
+//                 purchasePrice: property.purchasePrice,
+//                 closingCosts: property.closingCosts,
+//                 downPayment: property.downPaymentPerc * property.purchasePrice,
+//               },
+//               picture: property.picture,
+//               ROE: 0,
+//             };
+//           })(),
+//           (() => {
+//             return {
+//               //1
+//               type: "target",
+//               uid: property.uuid,
+//               valuation: 0,
+//               loanBalance: 0,
+//               equity: 0,
+//               cashFlow: 0,
+//               NOI: 0,
+//               arb: {
+//                 cashOnCash: 0,
+//                 avarageCap: 0,
+//                 rentMultiplier: 0,
+//                 arbAppreciation: 0,
+//                 arbDepreciation: 0,
+//                 arbDownPayment: 0,
+//               },
+//               monthlyIncome: {
+//                 rent: 0,
+//                 otherIncome: 0,
+//               },
+//               monthlyExpenses: {
+//                 vacancy: 0,
+//                 taxes: 0,
+//                 insurance: 0,
+//                 management: 0,
+//                 hoa: 0,
+//                 maintenance: 0,
+//                 utils: 0,
+//                 total: 0,
+//               },
+//               loans: {
+//                 totalYears: 0,
+//                 initialBalance: 0,
+//                 currentBalance: 0,
+//                 interestRate: 0,
+//                 pmi: 0,
+//                 extraPayments: 0,
+//                 monthlyPayment: 0,
+//               },
+//               assumptions: {
+//                 expenseInflation: 0,
+//                 rentalGrowth: 0,
+//                 appreciation: 0,
+//                 maintenance: 0,
+//                 vacancy: 0,
+//                 management: 0,
+//               },
+//               acquisition: {
+//                 totalCashOutlay: 0,
+//                 purchasePrice: 0,
+//                 closingCosts: 0,
+//                 downPayment: 0,
+//               },
+//               picture: "",
+//               ROE: 0,
+//             };
+//           })(),
+//         ]
+//       : (() => {
+//           return {
+//             //1
+//             type: "non-target",
+//             uid: property.uuid,
+//             valuation: 0,
+//             loanBalance: 0,
+//             equity: 0,
+//             cashFlow: 0,
+//             NOI: 0,
+//             arb: {
+//               cashOnCash: 0,
+//               avarageCap: 0,
+//               rentMultiplier: 0,
+//               arbAppreciation: 0,
+//               arbDepreciation: 0,
+//               arbDownPayment: 0,
+//             },
+//             monthlyIncome: {
+//               rent: 0,
+//               otherIncome: 0,
+//             },
+//             monthlyExpenses: {
+//               vacancy: 0,
+//               taxes: 0,
+//               insurance: 0,
+//               management: 0,
+//               hoa: 0,
+//               maintenance: 0,
+//               utils: 0,
+//               total: 0,
+//             },
+//             loans: {
+//               totalYears: 0,
+//               initialBalance: 0,
+//               currentBalance: 0,
+//               interestRate: 0,
+//               pmi: 0,
+//               extraPayments: 0,
+//               monthlyPayment: 0,
+//             },
+//             assumptions: {
+//               expenseInflation: 0,
+//               rentalGrowth: 0,
+//               appreciation: 0,
+//               maintenance: 0,
+//               vacancy: 0,
+//               management: 0,
+//             },
+//             acquisition: {
+//               totalCashOutlay: 0,
+//               purchasePrice: 0,
+//               closingCosts: 0,
+//               downPayment: 0,
+//             },
+//             picture: "",
+//             ROE: 0,
+//           };
+//         })();
+//   });
+//   return result;
+// };
 
 const getRefinancedTarget = (
   target_property: PortfolioForecastingProps,

@@ -42,15 +42,26 @@ export interface PortfolioForecastingProps {
   downPaymentPerc: number;
   taxRate: number;
   costToSell: number;
+  picture?: string;
 }
 
-export interface TargetPortfolioProps extends PortfolioForecastingProps {
+export interface RequestForecastingProps {
+  array: PortfolioForecastingProps[];
+}
+
+export interface PropertyPortfolioProps extends PortfolioForecastingProps {
   uuid: string;
+}
+
+export interface PortfolioProps {
+  id: string;
+  properties: PropertyPortfolioProps[];
 }
 
 export interface Request_1031_Props {
   scenario_type: string | number;
   target_property: string;
+  target_portfolio: string;
   scenario_level: string;
   default_values: {
     new_appreciation: number;
@@ -72,8 +83,12 @@ export interface Request_1031_Props {
   new_caprate: number;
   new_loan_interest_rate: number;
   user_id: string;
-  target_portflio: TargetPortfolioProps[];
+  portfolios: PortfolioProps[];
 }
+
+export type AmortizationNonTargetType = {
+  [uuid: string]: AmortizationResponseProps;
+};
 
 export interface ForecastingResponseObjectProps {
   year: number;
@@ -110,12 +125,15 @@ export interface ForecastingResponseObjectProps {
 }
 
 export type PropertiesProps = {
+  // type?: "target_property" | "non-target_property";
   uid: string;
   valuation: number;
   loanBalance: number;
   equity: number;
   cashFlow: number;
   NOI: number;
+  ROE?: number;
+  picture?: string;
   arb: {
     cashOnCash: number;
     avarageCap: number;
@@ -163,29 +181,32 @@ export type PropertiesProps = {
   };
 };
 
+export type PortfolioResponseProps = {
+  name: string;
+  valuation: number;
+  equity: number;
+  NOI: number;
+  cashFlow: number;
+  LTV: number;
+  uuid: string;
+  ROE?: number;
+  arb: {
+    cashOnCash: number;
+    avarageCap: number;
+    rentMultiplier: number;
+    arbAppreciation: number;
+    arbDepreciation: number;
+    arbDownPayment: number;
+  };
+  properties: PropertiesProps[];
+};
+
 export type ComparisonResponseObjectProps = {
   comparison: {
     target_property: any;
     refinanced_property: string;
     "new-investemnt-id": string;
-    portfolios: {
-      name: string;
-      valuation: number;
-      equity: number;
-      NOI: number;
-      cashFlow: number;
-      LTV: number;
-      uuid: string;
-      arb: {
-        cashOnCash: number;
-        avarageCap: number;
-        rentMultiplier: number;
-        arbAppreciation: number;
-        arbDepreciation: number;
-        arbDownPayment: number;
-      };
-      properties: PropertiesProps[];
-    }[];
+    portfolios: PortfolioResponseProps[];
   };
 };
 

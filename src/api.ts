@@ -5,47 +5,78 @@ import {
   Env,
   AmortizationResponseProps,
   PortfolioForecastingProps,
+  PortfolioProps,
 } from "./types/types";
 
-const getForecasting = async (forecastingRequestObject: any, env: Env) => {
-  // const forecastingRequestObject: any = getForecastingRequestObject(req);
-  let forecatingResponse: ForecastingResponseObjectProps[] = [];
+const getForecasting = async (forecastingRequestObjects: any, env: Env) => {
   try {
-    const data = await fetch(env.FORECASTING_URL, {
-      method: "POST",
-      body: JSON.stringify(forecastingRequestObject),
-    });
+    console.log("getForecasting", forecastingRequestObjects);
+    // console.log("TEST: ", forecastingRequestObjects[0].array);
+    let forecatingResponse: ForecastingResponseObjectProps[] = [];
+    const fetchPromises = forecastingRequestObjects.map(
+      async (requestObj: any) => {
+        const data = await fetch(env.FORECASTING_URL, {
+          method: "POST",
+          body: JSON.stringify(requestObj),
+        });
+        forecatingResponse =
+          (await data.json()) as ForecastingResponseObjectProps[];
+        return { [requestObj.array[0].uuid]: forecatingResponse };
+      }
+    );
 
-    forecatingResponse =
-      (await data.json()) as ForecastingResponseObjectProps[];
-    return forecatingResponse;
+    const res = await Promise.all(fetchPromises);
+    console.log(res);
+    return res;
   } catch (error) {
     console.error("❌ getForecasting: ", error);
     throw error;
   }
 };
 
-const getAmortization = async (
-  req: Request_1031_Props,
-  env: Env
-): Promise<AmortizationResponseProps> => {
-  const mortgageYears =
-    req.target_portflio.find((item) => item.uuid === req.target_property)
-      ?.loans[0].mortgageYears || 0;
-  const { available_equity, valuation } = getTempVariables(req);
+const getAmortization = async (req: Request_1031_Props, env: Env) => {
+  const targetProperty = req.portfolios.find(
+    (portfolio) => portfolio.id === req.target_portfolio
+  );
+  const targetPortfolio = targetProperty?.properties.find(
+    (property) => property.uuid === req.target_property
+  );
+  if (!targetProperty) return;
+  const { available_equity, valuation } = getTempVariables(req, targetProperty);
   const newInterestRate = req.new_loan_interest_rate;
   const params = new URLSearchParams({
     amount: (valuation - available_equity).toString(),
     startingBalance: (valuation - available_equity).toString(),
     interestRate: (newInterestRate * 100).toString(),
-    termInMonths: (mortgageYears * 12).toString(),
+    termInMonths: (30 * 12).toString(),
   });
-
   const amortizationResponse: AmortizationResponseProps = await fetch(
     `${env.AMORTIZATION_URL}/?${params}`
   ).then((res) => res.json());
   return amortizationResponse;
 };
+
+// const getAmortization = async (
+//   req: Request_1031_Props,
+//   env: Env
+// ): Promise<AmortizationResponseProps> => {
+//   const mortgageYears =
+//     req.target_portflio.find((item) => item.uuid === req.target_property)
+//       ?.loans[0].mortgageYears || 0;
+//   const { available_equity, valuation } = getTempVariables(req);
+//   const newInterestRate = req.new_loan_interest_rate;
+//   const params = new URLSearchParams({
+//     amount: (valuation - available_equity).toString(),
+//     startingBalance: (valuation - available_equity).toString(),
+//     interestRate: (newInterestRate * 100).toString(),
+//     termInMonths: (mortgageYears * 12).toString(),
+//   });
+
+//   const amortizationResponse: AmortizationResponseProps = await fetch(
+//     `${env.AMORTIZATION_URL}/?${params}`
+//   ).then((res) => res.json());
+//   return amortizationResponse;
+// };
 
 const getRefiAmortization = async (
   req: PortfolioForecastingProps,
@@ -85,10 +116,11 @@ const getRefiForecasting = async (req: PortfolioForecastingProps, env: Env) => {
   }
 };
 
-const getAmortizationNonTarget = async (req: Request_1031_Props, env: Env) => {
-  const nonTargetPortfolios = req.target_portflio;
-
-  const fetchPromises = nonTargetPortfolios.map(async (portfolio) => {
+const getAmortizationNonTarget = async (
+  portfolios: PortfolioProps,
+  env: Env
+) => {
+  const fetchPromises = portfolios.properties.map(async (portfolio) => {
     const { startingBalance, mortgageYears, interestRate, loanBalance } =
       portfolio.loans[0];
 
