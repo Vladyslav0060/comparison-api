@@ -8,12 +8,18 @@ async function fetch(request: Request, env: Env, ctx: ExecutionContext) {
       return new Response(
         `Request was sent with "${request.method}" method, only "POST" allowed`
       );
+    let response;
     const body: Request_1031_Props = await request.json();
-    const response =
-      body.scenario_type === "1031"
-        ? await start(body, env)
-        : await startRefi(body, env);
-    console.log("response: ", response);
+    switch (body.scenario_type) {
+      case "1031":
+        response = await start(body, env);
+        break;
+      case "refi":
+        response = await startRefi(body, env);
+        break;
+      default:
+        throw new Error("Scenario type is not found");
+    }
     return new Response(JSON.stringify(response), {
       headers: { "content-type": "application/json" },
       status: 200,

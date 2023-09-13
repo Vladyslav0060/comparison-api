@@ -125,6 +125,7 @@ export interface ForecastingResponseObjectProps {
 }
 
 export type PropertiesProps = {
+  reduce(arg0: (acc: any, i: any) => any, arg1: number): unknown;
   // type?: "target_property" | "non-target_property";
   uid: string;
   valuation: number;
@@ -203,7 +204,8 @@ export type PortfolioResponseProps = {
 
 export type ComparisonResponseObjectProps = {
   comparison: {
-    target_property: any;
+    target_property: string;
+    target_portfolio: string;
     refinanced_property: string;
     "new-investemnt-id": string;
     portfolios: PortfolioResponseProps[];

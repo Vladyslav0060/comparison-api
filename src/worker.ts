@@ -15,18 +15,22 @@ import {
   Request_1031_Props,
   ComparisonResponseObjectProps,
 } from "./types/types";
-import { getPortfolioObject, getForecastingRequestObjects } from "./utils";
+import { getForecastingRequestObjects } from "./utils";
 
 const getTempVariables = (req: Request_1031_Props) => {
   const targetPortfolio = req.portfolios.find(
     (item) => item.id === req.target_portfolio
   );
-  if (!targetPortfolio)
-    throw new Error("Portfolio with this uuid is not found");
-  const targetProperty = targetPortfolio.properties.find(
+  const targetProperty = targetPortfolio?.properties.find(
     (p) => p.uuid === req.target_property
   );
-  if (!targetProperty) throw new Error("Property with this uuid is not found");
+  if (!targetPortfolio || !targetProperty)
+    return {
+      available_equity: 0,
+      mothlyNOI: 0,
+      monthly_rents: 0,
+      valuation: 0,
+    };
   const available_equity =
     targetProperty.currentValue - targetProperty.loans[0].startingBalance;
   const mothlyNOI =
@@ -95,6 +99,14 @@ const getPortolioPropertiesObjects = (
           property.uuid === req.target_property
             ? valuation
             : property.currentValue;
+
+        const arbappreciation =
+          local_valuation * req.default_values.new_appreciation;
+        const arbdepreciation =
+          ((local_valuation * 0.85) / 27.5) * property.taxRate;
+        const arbdownpayment =
+          propertyForecasting[0].cumulativeAppreciations.mortgagePaydown;
+        const equity = available_equity;
         return {
           //1
           // type: "target",
@@ -176,8 +188,10 @@ const getPortolioPropertiesObjects = (
             closingCosts: closingcosts,
             downPayment: downpayment,
           },
-          picture: "",
-          ROE: 0,
+          picture: property.picture,
+          ROE:
+            (arbappreciation + arbdepreciation + arbdownpayment + cashflow) /
+            equity,
         };
       })();
     } else
@@ -205,6 +219,15 @@ const getPortolioPropertiesObjects = (
         const totalcashoutlay =
           downpayment + closingcosts + property.repairCosts;
         const local_valuation = property.currentValue;
+        const arbappreciation =
+          local_valuation * property.annualAppreciationRate;
+        const arbdepreciation =
+          ((property.purchasePrice * 0.85) / 27.5) * property.taxRate;
+        const arbdownpayment =
+          propertyForecasting[0].cumulativeAppreciations.mortgagePaydown;
+        const equity =
+          property.currentValue -
+          property.loans.reduce((acc, item) => acc + item.loanBalance, 0);
         return {
           //1
           // type: "non-target",
@@ -214,9 +237,7 @@ const getPortolioPropertiesObjects = (
             (acc, item) => acc + item.loanBalance,
             0
           ),
-          equity:
-            property.currentValue -
-            property.loans.reduce((acc, item) => acc + item.loanBalance, 0),
+          equity: equity,
           cashFlow: cashflow,
           NOI: noi,
           arb: {
@@ -225,11 +246,9 @@ const getPortolioPropertiesObjects = (
             rentMultiplier:
               local_valuation /
               (property.avgRent * 12 + property.otherIncome * 12),
-            arbAppreciation: local_valuation * property.annualAppreciationRate,
-            arbDepreciation:
-              ((property.purchasePrice * 0.85) / 27.5) * property.taxRate,
-            arbDownPayment:
-              propertyForecasting[0].cumulativeAppreciations.mortgagePaydown,
+            arbAppreciation: arbappreciation,
+            arbDepreciation: arbdepreciation,
+            arbDownPayment: arbdownpayment,
           },
           monthlyIncome: {
             rent: property.avgRent,
@@ -286,7 +305,9 @@ const getPortolioPropertiesObjects = (
             downPayment: property.downPaymentPerc * property.purchasePrice,
           },
           picture: property.picture,
-          ROE: 0,
+          ROE:
+            (arbappreciation + arbdepreciation + arbdownpayment + cashflow) /
+            equity,
         };
       })();
   });
@@ -297,6 +318,7 @@ const buildPortfolioResponse = (
   properties: PropertiesProps[],
   portfolio_id: string
 ): PortfolioResponseProps => {
+  console.log("build properties: ", properties);
   const { valuationSum, equitySum, loanBalancesSum, noiSum, cashflowSum } =
     properties.reduce(
       (acc, item) => {
@@ -377,6 +399,15 @@ export const start = async (
   env: Env
 ): Promise<any> => {
   try {
+    const target_portfolio = req.portfolios.find(
+      (p) => p.id === req.target_portfolio
+    );
+
+    target_portfolio &&
+      req.portfolios.push({
+        ...target_portfolio,
+        id: `clone-${target_portfolio.id}`,
+      });
     const targetAmortization = await getAmortization(req, env);
     const portfolios = await Promise.all(
       req.portfolios.map(async (portfolio, idx = 0) => {
@@ -404,6 +435,7 @@ export const start = async (
     const response: ComparisonResponseObjectProps = {
       comparison: {
         "new-investemnt-id": req.target_property,
+        target_portfolio: req.target_portfolio,
         target_property: req.target_property,
         refinanced_property: req.target_property,
         portfolios: portfolios,
