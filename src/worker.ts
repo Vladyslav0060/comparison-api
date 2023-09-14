@@ -227,7 +227,7 @@ const getPortolioPropertiesObjects = (
           propertyForecasting[0].cumulativeAppreciations.mortgagePaydown;
         const equity =
           property.currentValue -
-          property.loans.reduce((acc, item) => acc + item.loanBalance, 0);
+          property.loans.reduce((acc, item) => acc + item.startingBalance, 0);
         return {
           //1
           // type: "non-target",
@@ -319,25 +319,33 @@ const buildPortfolioResponse = (
   portfolio_id: string
 ): PortfolioResponseProps => {
   console.log("build properties: ", properties);
-  const { valuationSum, equitySum, loanBalancesSum, noiSum, cashflowSum } =
-    properties.reduce(
-      (acc, item) => {
-        return {
-          valuationSum: item.valuation + acc.valuationSum,
-          equitySum: item.equity + acc.equitySum,
-          noiSum: item.NOI + acc.noiSum,
-          loanBalancesSum: item.loanBalance + acc.loanBalancesSum,
-          cashflowSum: item.cashFlow + acc.cashflowSum,
-        };
-      },
-      {
-        valuationSum: 0,
-        equitySum: 0,
-        loanBalancesSum: 0,
-        noiSum: 0,
-        cashflowSum: 0,
-      }
-    );
+  const {
+    valuationSum,
+    equitySum,
+    loanBalancesSum,
+    noiSum,
+    cashflowSum,
+    roeSum,
+  } = properties.reduce(
+    (acc, item) => {
+      return {
+        valuationSum: item.valuation + acc.valuationSum,
+        equitySum: item.equity + acc.equitySum,
+        noiSum: item.NOI + acc.noiSum,
+        loanBalancesSum: item.loanBalance + acc.loanBalancesSum,
+        cashflowSum: item.cashFlow + acc.cashflowSum,
+        roeSum: item.ROE + acc.roeSum,
+      };
+    },
+    {
+      valuationSum: 0,
+      equitySum: 0,
+      loanBalancesSum: 0,
+      noiSum: 0,
+      cashflowSum: 0,
+      roeSum: 0,
+    }
+  );
   return {
     name: portfolio_id,
     cashFlow: cashflowSum,
@@ -366,6 +374,7 @@ const buildPortfolioResponse = (
     },
     equity: equitySum,
     LTV: (loanBalancesSum / valuationSum) * 100,
+    ROE: (roeSum / properties.length) * 100,
     NOI: noiSum,
     uuid: portfolio_id,
     valuation: valuationSum,

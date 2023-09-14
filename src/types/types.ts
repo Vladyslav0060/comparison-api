@@ -133,7 +133,7 @@ export type PropertiesProps = {
   equity: number;
   cashFlow: number;
   NOI: number;
-  ROE?: number;
+  ROE: number;
   picture?: string;
   arb: {
     cashOnCash: number;
@@ -190,7 +190,7 @@ export type PortfolioResponseProps = {
   cashFlow: number;
   LTV: number;
   uuid: string;
-  ROE?: number;
+  ROE: number;
   arb: {
     cashOnCash: number;
     avarageCap: number;
