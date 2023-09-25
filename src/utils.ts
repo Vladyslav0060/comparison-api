@@ -4,6 +4,7 @@ import {
   Request_1031_Props,
   PortfolioProps,
   RequestForecastingProps,
+  PropertiesProps,
 } from "./types/types";
 import { getAmortization, getAmortizationNonTarget } from "./api";
 
@@ -119,4 +120,54 @@ const getForecastingRequestObjects = (
   }
 };
 
-export { getTempVariables, getForecastingRequestObjects };
+const getForecastingBodyFromPorfolio = (properties: PropertiesProps[]) => {
+  const result = properties.map((property) => {
+    return {
+      name: property.name,
+      uuid: property.uid,
+      allExpenses: {
+        propTaxes: property.monthlyExpenses.taxes,
+        insurance: property.monthlyExpenses.insurance,
+        capEx: property.monthlyExpenses.maintenance,
+        propManage: property.monthlyExpenses.management,
+        othersExpenses: 0,
+        utils: property.monthlyExpenses.utils,
+        hoa: property.monthlyExpenses.hoa,
+      },
+      loans: [
+        {
+          startingBalance: property.loans.currentBalance,
+          mortgageYears: property.loans.totalYears,
+          loanBalance: property.loans.initialBalance,
+          interestRate: property.loans.interestRate,
+          extraPayement: 0,
+        },
+      ],
+      yearsNum: 31,
+      vacancyLossPercentage: property.assumptions.vacancy,
+      avgRent: property.monthlyIncome.rent,
+      unitsNum: 1,
+      otherIncome: property.monthlyIncome.otherIncome,
+      annualRevenueIncrease: property.assumptions.rentalGrowth,
+      annualOperatingExpenseIncrease: property.assumptions.expenseInflation,
+      landPerc: 0.2,
+      propertyPerc: 0.8,
+      purchasePrice: property.acquisition.purchasePrice,
+      closingCosts: property.acquisition.closingCosts,
+      repairCosts: property.acquisition.repairCosts,
+      currentValue: property.valuation,
+      annualAppreciationRate: property.assumptions.appreciation,
+      downPaymentPerc:
+        1 - property.loans.initialBalance / property.acquisition.purchasePrice,
+      taxRate: property.taxRate,
+      costToSell: 0.07,
+    };
+  });
+  return { array: result };
+};
+
+export {
+  getTempVariables,
+  getForecastingRequestObjects,
+  getForecastingBodyFromPorfolio,
+};

@@ -1,6 +1,7 @@
 import {
   getAmortization,
   getAmortizationNonTarget,
+  getFinalForecasting,
   getForecasting,
   getRefiAmortization,
   getRefiForecasting,
@@ -34,7 +35,7 @@ const temp_vars = (
     if (!target_property) return null;
     const available_equity =
       target_property.currentValue -
-      target_property.loans[0].startingBalance -
+      target_property.loans[0].balanceCurrent -
       target_property.currentValue * body.new_downpaymment;
     const monthly_noi =
       (available_equity * body.new_caprate) / 12 / body.new_downpaymment;
@@ -152,19 +153,15 @@ function getNonTargetProperty(
     propertyForecasting[0].cumulativeAppreciations.mortgagePaydown;
   const equity =
     item.currentValue -
-    item.loans.reduce((acc, item) => acc + item.startingBalance, 0);
+    item.loans.reduce((acc, item) => acc + item.balanceCurrent, 0);
 
   return {
     // non-target
     uid: item.uuid,
+    name: item.name,
     valuation: item.currentValue,
-    loanBalance: item.loans.reduce(
-      (acc, item) => acc + item.startingBalance,
-      0
-    ),
-    equity:
-      item.currentValue -
-      item.loans.reduce((acc, item) => acc + item.startingBalance, 0),
+    loanBalance: item.loans.reduce((acc, item) => acc + item.balanceCurrent, 0),
+    equity: equity,
     cashFlow: cashflow,
     NOI: noi,
     arb: {
@@ -230,8 +227,10 @@ function getNonTargetProperty(
       purchasePrice: item.purchasePrice,
       closingCosts: item.closingCosts,
       downPayment: item.downPaymentPerc * item.purchasePrice,
+      repairCosts: item.repairCosts,
     },
     picture: item.picture,
+    taxRate: item.taxRate,
     ROE:
       (arbappreciation + arbdepreciation + arbdownpayment + cashflow) / equity,
   };
@@ -295,6 +294,7 @@ async function getTargetProperty(
     const res = [
       {
         uid: "refi-target",
+        name: `Refinanced ${target_property?.name}`,
         valuation: rt_valuation,
         loanBalance: refinanced_target.currentValue - available_equity,
         equity: rt_equity,
@@ -364,8 +364,10 @@ async function getTargetProperty(
           purchasePrice: rt_valuation,
           closingCosts: closingcosts,
           downPayment: available_equity,
+          repairCosts: 0,
         },
         picture: target_property?.picture,
+        taxRate: req.default_values.new_taxRate,
         ROE:
           (rt_arbappreciation +
             rt_arbdepreciation +
@@ -375,6 +377,7 @@ async function getTargetProperty(
       },
       {
         uid: "new-investment",
+        name: "New Investment",
         valuation: ni_valuation,
         loanBalance: ni_valuation - available_equity,
         equity: available_equity,
@@ -445,11 +448,13 @@ async function getTargetProperty(
         },
         acquisition: {
           totalCashOutlay: totalcashoutlay,
-          purchasePrice: 0,
+          purchasePrice: ni_valuation,
           closingCosts: closingcosts,
           downPayment: available_equity,
+          repairCosts: 0,
         },
         picture: target_property?.picture,
+        taxRate: req.default_values.new_taxRate,
         ROE:
           (ni_arbappreciation +
             ni_arbdepreciation +
@@ -498,48 +503,51 @@ const getPortolioPropertiesObjects = async (
 
 const buildPortfolioResponse = (
   properties: PropertiesProps[],
-  portfolio_id: string
+  portfolio_id: string,
+  portfolio_name: string,
+  isTargetPortfolio = false
 ) => {
-  const {
-    valuationSum,
-    equitySum,
-    loanBalancesSum,
-    noiSum,
-    cashflowSum,
-    roeSum,
-  } = properties.reduce(
-    (acc, item) => {
-      return {
-        valuationSum: item.valuation + acc.valuationSum,
-        equitySum: item.equity + acc.equitySum,
-        noiSum: item.NOI + acc.noiSum,
-        loanBalancesSum: item.loanBalance + acc.loanBalancesSum,
-        cashflowSum: item.cashFlow + acc.cashflowSum,
-        roeSum: item.ROE + acc.roeSum,
-      };
-    },
-    {
-      valuationSum: 0,
-      equitySum: 0,
-      loanBalancesSum: 0,
-      noiSum: 0,
-      cashflowSum: 0,
-      roeSum: 0,
-    }
-  );
+  const { valuationSum, equitySum, loanBalancesSum, noiSum, cashflowSum } =
+    properties.reduce(
+      (acc, item) => {
+        return {
+          valuationSum: item.valuation + acc.valuationSum,
+          equitySum: item.equity + acc.equitySum,
+          noiSum: item.NOI + acc.noiSum,
+          loanBalancesSum: item.loanBalance + acc.loanBalancesSum,
+          cashflowSum: item.cashFlow + acc.cashflowSum,
+        };
+      },
+      {
+        valuationSum: 0,
+        equitySum: 0,
+        loanBalancesSum: 0,
+        noiSum: 0,
+        cashflowSum: 0,
+      }
+    );
+
+  const arbAppreciationSum = properties.reduce((acc, item) => {
+    return item.arb.arbAppreciation + acc;
+  }, 0);
+  const arbDepreciationSum = properties.reduce((acc, item) => {
+    return item.arb.arbDepreciation + acc;
+  }, 0);
+  const arbDownpaymentSum = properties.reduce((acc, item) => {
+    return item.arb.arbDownPayment + acc;
+  }, 0);
+
+  const currentDate = new Date();
+  const options = { year: "numeric", month: "long", day: "numeric" };
+  const formattedDate = currentDate.toLocaleDateString(undefined, options);
+
   return {
-    name: portfolio_id,
+    name: isTargetPortfolio ? `Refi - ${formattedDate}` : portfolio_name,
     cashFlow: cashflowSum,
     arb: {
-      arbAppreciation: properties.reduce((acc, item) => {
-        return item.arb.arbAppreciation + acc;
-      }, 0),
-      arbDepreciation: properties.reduce((acc, item) => {
-        return item.arb.arbDepreciation + acc;
-      }, 0),
-      arbDownPayment: properties.reduce((acc, item) => {
-        return item.arb.arbDownPayment + acc;
-      }, 0),
+      arbAppreciation: arbAppreciationSum,
+      arbDepreciation: arbDepreciationSum,
+      arbDownPayment: arbDownpaymentSum,
       avarageCap:
         properties.reduce((acc, item) => {
           return item.arb.avarageCap + acc;
@@ -555,7 +563,12 @@ const buildPortfolioResponse = (
     },
     equity: equitySum,
     LTV: (loanBalancesSum / valuationSum) * 100,
-    ROE: (roeSum / properties.length) * 100,
+    ROE:
+      (arbAppreciationSum +
+        arbDepreciationSum +
+        arbDownpaymentSum +
+        cashflowSum) /
+      equitySum,
     NOI: noiSum,
     uuid: portfolio_id,
     valuation: valuationSum,
@@ -581,8 +594,13 @@ const getPortfolioResponse = async (
   );
   const portfolio_res = buildPortfolioResponse(
     portfolioPropertiesResponse.flat(),
-    portfolio.id
+    portfolio.id,
+    portfolio.name,
+    portfolio.id === req.target_portfolio
   );
+  portfolio_res.properties.forEach((property) => {
+    console.log({ property });
+  });
   return portfolio_res;
 };
 
@@ -617,7 +635,7 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
         const amortizationResponseNonTarget: AmortizationNonTargetType =
           await getAmortizationNonTarget(portfolio, env);
 
-        const portfolio_res = await getPortfolioResponse(
+        const portfolio_res: any = await getPortfolioResponse(
           req,
           portfolio,
           amortizationResponseNonTarget,
@@ -625,6 +643,11 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
           forecatingResponse,
           env
         );
+        const forecastingRes = await getFinalForecasting(
+          portfolio_res.properties,
+          env
+        );
+        portfolio_res.forecasting = forecastingRes;
         return portfolio_res;
       })
     );

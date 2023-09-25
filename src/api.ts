@@ -1,4 +1,4 @@
-import { getForecastingRequestObject, getTempVariables } from "./utils";
+import { getForecastingBodyFromPorfolio, getTempVariables } from "./utils";
 import {
   Request_1031_Props,
   ForecastingResponseObjectProps,
@@ -6,11 +6,12 @@ import {
   AmortizationResponseProps,
   PortfolioForecastingProps,
   PortfolioProps,
+  PropertiesProps,
 } from "./types/types";
 
 const getForecasting = async (forecastingRequestObjects: any, env: Env) => {
   try {
-    console.log("getForecasting", forecastingRequestObjects);
+    // console.log("getForecasting", forecastingRequestObjects);
     // console.log("TEST: ", forecastingRequestObjects[0].array);
     let forecatingResponse: ForecastingResponseObjectProps[] = [];
     const fetchPromises = forecastingRequestObjects.map(
@@ -26,7 +27,7 @@ const getForecasting = async (forecastingRequestObjects: any, env: Env) => {
     );
 
     const res = await Promise.all(fetchPromises);
-    console.log(res);
+    // console.log(res);
     return res;
   } catch (error) {
     console.error("❌ getForecasting: ", error);
@@ -152,10 +153,22 @@ const getAmortizationNonTarget = async (
   return response;
 };
 
+const getFinalForecasting = async (properties: PropertiesProps[], env: Env) => {
+  const forecastingRequestArray = getForecastingBodyFromPorfolio(properties);
+  let forecatingResponse: ForecastingResponseObjectProps;
+  const data = await fetch(env.FORECASTING_URL, {
+    method: "POST",
+    body: JSON.stringify(forecastingRequestArray),
+  });
+  forecatingResponse = (await data.json()) as ForecastingResponseObjectProps;
+  return forecatingResponse;
+};
+
 export {
   getForecasting,
   getAmortization,
   getAmortizationNonTarget,
   getRefiAmortization,
   getRefiForecasting,
+  getFinalForecasting,
 };

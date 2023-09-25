@@ -19,9 +19,11 @@ interface LoanObjectProps {
   loanBalance: number;
   interestRate: number;
   extraPayement: number;
+  balanceCurrent: number;
 }
 
 export interface PortfolioForecastingProps {
+  name: string;
   uuid: string | number;
   allExpenses: AllExpensesProps;
   loans: LoanObjectProps[];
@@ -54,6 +56,7 @@ export interface PropertyPortfolioProps extends PortfolioForecastingProps {
 }
 
 export interface PortfolioProps {
+  name: string;
   id: string;
   properties: PropertyPortfolioProps[];
 }
@@ -75,6 +78,7 @@ export interface Request_1031_Props {
     new_prp_type: string;
     new_rentalGrowth: number;
     new_taxes: number;
+    new_taxRate: number;
     new_utils: number;
     new_vacancy: number;
   };
@@ -125,8 +129,9 @@ export interface ForecastingResponseObjectProps {
 }
 
 export type PropertiesProps = {
-  reduce(arg0: (acc: any, i: any) => any, arg1: number): unknown;
+  // reduce(arg0: (acc: any, i: any) => any, arg1: number): unknown;
   // type?: "target_property" | "non-target_property";
+  name: string;
   uid: string;
   valuation: number;
   loanBalance: number;
@@ -179,7 +184,9 @@ export type PropertiesProps = {
     purchasePrice: number;
     closingCosts: number;
     downPayment: number;
+    repairCosts: number;
   };
+  taxRate: number;
 };
 
 export type PortfolioResponseProps = {
@@ -200,6 +207,7 @@ export type PortfolioResponseProps = {
     arbDownPayment: number;
   };
   properties: PropertiesProps[];
+  forecasting: ForecastingResponseObjectProps;
 };
 
 export type ComparisonResponseObjectProps = {
