@@ -274,7 +274,6 @@ const getPortolioPropertiesObjects = (
               propManage +
               hoa +
               capEx +
-              propManage +
               utils;
             return {
               vacancy: vacancy,
