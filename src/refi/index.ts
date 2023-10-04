@@ -184,14 +184,7 @@ function getNonTargetProperty(
         item.allExpenses;
       const vacancy = avgRent * vacancyLossPercentage;
       const total =
-        vacancy +
-        propTaxes +
-        insurance +
-        propManage +
-        hoa +
-        capEx +
-        propManage +
-        utils;
+        vacancy + propTaxes + insurance + propManage + hoa + capEx + utils;
       return {
         vacancy: vacancy,
         taxes: propTaxes,
