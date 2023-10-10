@@ -79,7 +79,6 @@ const getNewInvestment = (
     const temps = temp_vars(target_property, body);
     if (!temps) throw new Error("No target property found");
     const { available_equity, monthly_rents } = temps;
-    console.log("AAAÀaaaaaaaaa==========================");
     return {
       ...target_property,
       allExpenses: {
@@ -140,9 +139,12 @@ function getNonTargetProperty(
       item.vacancyLossPercentage * (item.avgRent + item.otherIncome)) *
     12;
   const temp_non_target = amortizationResponseNonTarget[item.uuid];
-
-  const cashflow = noi - temp_non_target.summary.monthlyPayment * 12;
-
+  const cashflow =
+    noi -
+    (temp_non_target.summary.monthlyPayment +
+      item.loans[0].pmi +
+      item.loans[0].extraPayement) *
+      12;
   const closingcosts = item.closingCosts;
   const downpayment = item.downPaymentPerc * item.purchasePrice;
   const totalcashoutlay = downpayment + closingcosts + item.repairCosts;
@@ -183,8 +185,16 @@ function getNonTargetProperty(
       const { propTaxes, capEx, hoa, insurance, propManage, utils } =
         item.allExpenses;
       const vacancy = avgRent * vacancyLossPercentage;
+      const otherExpenses = item.allExpenses.othersExpenses;
       const total =
-        vacancy + propTaxes + insurance + propManage + hoa + capEx + utils;
+        vacancy +
+        propTaxes +
+        insurance +
+        propManage +
+        hoa +
+        capEx +
+        utils +
+        otherExpenses;
       return {
         vacancy: vacancy,
         taxes: propTaxes,
@@ -193,6 +203,7 @@ function getNonTargetProperty(
         hoa: hoa,
         maintenance: capEx,
         utils: utils,
+        otherExpenses: otherExpenses,
         total: total,
       };
     })(),
@@ -241,6 +252,7 @@ async function getTargetProperty(
     const target_property = portfolio.properties.find(
       (p) => p.uuid === req.target_property
     );
+    console.log({ target_property });
     const temp = temp_vars(target_property, req);
     if (!temp) throw new Error("No target property found");
     const { available_equity, monthly_noi, monthly_rents } = temp;
@@ -259,50 +271,62 @@ async function getTargetProperty(
       env
     );
     const rt_valuation = refinanced_target.currentValue;
-    const rt_cashflow =
-      (monthly_noi - refiAmortization.summary.monthlyPayment) * 12;
+
     const closingcosts =
       (req.default_values.new_closingCosts / req.new_downpaymment) *
       available_equity;
-    const noi = monthly_noi * 12;
+    const allExpensesSum = Object.values(refinanced_target.allExpenses).reduce(
+      (acc, item) => acc + item,
+      0
+    );
+    const ni_noi = monthly_noi * 12;
     const ni_valuation = available_equity / req.new_downpaymment;
     const ni_cashflow =
       (monthly_noi - newInvestmentAmortization.summary.monthlyPayment) * 12;
     const totalcashoutlay = available_equity + closingcosts;
+    const rt_noi =
+      (refinanced_target.avgRent +
+        refinanced_target.otherIncome -
+        allExpensesSum -
+        refinanced_target.vacancyLossPercentage *
+          (refinanced_target.avgRent + refinanced_target.otherIncome)) *
+      12;
+    const rt_cashflow =
+      (rt_noi / 12 - refiAmortization.summary.monthlyPayment) * 12;
     const rt_arbappreciation =
       rt_valuation * req.default_values.new_appreciation;
     const rt_arbdepreciation =
-      ((rt_valuation * 0.85) / 27.5) * req.default_values.new_taxes;
+      ((rt_valuation * 0.85) / 27.5) * req.default_values.new_taxRate;
     const rt_arbdownpayment =
       refiForecasting[0].cumulativeAppreciations.mortgagePaydown;
     const rt_equity = available_equity;
     const ni_arbappreciation =
       ni_valuation * req.default_values.new_appreciation;
     const ni_arbdepreciation =
-      ((ni_valuation * 0.85) / 27.5) * req.default_values.new_taxes;
+      ((ni_valuation * 0.85) / 27.5) * req.default_values.new_taxRate;
     const ni_arbdownpayment =
       newInvestmentForecasting[0].cumulativeAppreciations.mortgagePaydown;
     const ni_equity = available_equity;
-
+    console.log(target_property?.avgRent);
     const res = [
       {
-        uid: "refi-target",
+        uid: "refi_target",
         name: `Refinanced ${target_property?.name}`,
         valuation: rt_valuation,
         loanBalance: refinanced_target.currentValue - available_equity,
         equity: rt_equity,
         cashFlow: rt_cashflow,
-        NOI: noi,
+        NOI: rt_noi,
         arb: {
           cashOnCash: (rt_cashflow / totalcashoutlay) * 100,
-          avarageCap: (noi / rt_valuation) * 100,
-          rentMultiplier: rt_valuation / noi,
+          avarageCap: (rt_noi / rt_valuation) * 100,
+          rentMultiplier: rt_valuation / rt_noi,
           arbAppreciation: rt_arbappreciation,
           arbDepreciation: rt_arbdepreciation,
           arbDownPayment: rt_arbdownpayment,
         },
         monthlyIncome: {
-          rent: monthly_rents,
+          rent: target_property?.avgRent,
           otherIncome: refinanced_target.otherIncome,
         },
         monthlyExpenses: (() => {
@@ -314,6 +338,7 @@ async function getTargetProperty(
           const hoa = refinanced_target.allExpenses.hoa;
           const maintenance = refinanced_target.allExpenses.capEx;
           const utils = refinanced_target.allExpenses.utils;
+          const otherExpenses = refinanced_target.allExpenses.othersExpenses;
           const total =
             vacancy +
             taxes +
@@ -321,7 +346,8 @@ async function getTargetProperty(
             management +
             hoa +
             maintenance +
-            utils;
+            utils +
+            otherExpenses;
           return {
             vacancy,
             taxes,
@@ -330,6 +356,7 @@ async function getTargetProperty(
             hoa,
             maintenance,
             utils,
+            otherExpenses,
             total,
           };
         })(),
@@ -369,17 +396,17 @@ async function getTargetProperty(
           rt_equity,
       },
       {
-        uid: "new-investment",
+        uid: "new_investment",
         name: "New Investment",
         valuation: ni_valuation,
         loanBalance: ni_valuation - available_equity,
         equity: available_equity,
         cashFlow: ni_cashflow,
-        NOI: noi,
+        NOI: ni_noi,
         arb: {
           cashOnCash: (ni_cashflow / totalcashoutlay) * 100,
-          avarageCap: (noi / ni_valuation) * 100,
-          rentMultiplier: (ni_valuation / noi) * 100,
+          avarageCap: (ni_noi / ni_valuation) * 100,
+          rentMultiplier: (ni_valuation / ni_noi) * 100,
           arbAppreciation: ni_valuation * req.default_values.new_appreciation,
           arbDepreciation:
             ((ni_valuation * 0.85) / 27.5) * req.default_values.new_taxes,
@@ -399,6 +426,7 @@ async function getTargetProperty(
           const maintenance =
             monthly_rents * req.default_values.new_maintenance;
           const utils = monthly_rents * req.default_values.new_utils;
+          const otherExpenses = 0;
           const total =
             vacancy +
             taxes +
@@ -406,6 +434,7 @@ async function getTargetProperty(
             management +
             hoa +
             maintenance +
+            otherExpenses +
             utils;
           return {
             vacancy,
@@ -415,6 +444,7 @@ async function getTargetProperty(
             hoa,
             maintenance,
             utils,
+            otherExpenses,
             total,
           };
         })(),
@@ -591,9 +621,6 @@ const getPortfolioResponse = async (
     portfolio.name,
     portfolio.id === req.target_portfolio
   );
-  portfolio_res.properties.forEach((property) => {
-    console.log({ property });
-  });
   return portfolio_res;
 };
 
@@ -606,7 +633,9 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
       target_portfolio?.properties.find(
         (p) => p.uuid === req.target_property
       ) || null;
+
     const targetAmortization = await getAmortization(req, env);
+
     target_portfolio &&
       target_property &&
       req.portfolios.push({

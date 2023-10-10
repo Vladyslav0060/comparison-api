@@ -51,6 +51,7 @@ const getAmortization = async (req: Request_1031_Props, env: Env) => {
     interestRate: (newInterestRate * 100).toString(),
     termInMonths: (30 * 12).toString(),
   });
+  console.log(params);
   const amortizationResponse: AmortizationResponseProps = await fetch(
     `${env.AMORTIZATION_URL}/?${params}`
   ).then((res) => res.json());

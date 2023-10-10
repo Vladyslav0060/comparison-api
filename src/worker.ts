@@ -114,7 +114,7 @@ const getPortolioPropertiesObjects = (
         return {
           //1
           // type: "target",
-          uid: "new-investment",
+          uid: "new_investment",
           name: "New Investment",
           valuation: local_valuation,
           loanBalance: local_valuation - available_equity,
@@ -147,6 +147,7 @@ const getPortolioPropertiesObjects = (
             const maintenance =
               monthly_rents * req.default_values.new_maintenance;
             const utils = monthly_rents * req.default_values.new_utils;
+            const otherExpenses = 0;
             const total =
               vacancy +
               taxes +
@@ -154,6 +155,7 @@ const getPortolioPropertiesObjects = (
               management +
               hoa +
               maintenance +
+              otherExpenses +
               utils;
             return {
               vacancy: vacancy,
@@ -163,6 +165,7 @@ const getPortolioPropertiesObjects = (
               hoa: hoa,
               maintenance: maintenance,
               utils: utils,
+              otherExpenses: otherExpenses,
               total: total,
             };
           })(),
@@ -219,7 +222,12 @@ const getPortolioPropertiesObjects = (
               (property.avgRent + property.otherIncome)) *
           12;
         const temp_non_target = amortizationResponseNonTarget[property.uuid];
-        const cashflow = noi - temp_non_target.summary.monthlyPayment * 12;
+        const cashflow =
+          noi -
+          (temp_non_target.summary.monthlyPayment +
+            property.loans[0].pmi +
+            property.loans[0].extraPayement) *
+            12;
 
         const closingcosts = property.closingCosts;
         const downpayment = property.downPaymentPerc * property.purchasePrice;
@@ -267,6 +275,7 @@ const getPortolioPropertiesObjects = (
             const { propTaxes, capEx, hoa, insurance, propManage, utils } =
               property.allExpenses;
             const vacancy = avgRent * vacancyLossPercentage;
+            const otherExpenses = property.allExpenses.othersExpenses;
             const total =
               vacancy +
               propTaxes +
@@ -274,7 +283,8 @@ const getPortolioPropertiesObjects = (
               propManage +
               hoa +
               capEx +
-              utils;
+              utils +
+              otherExpenses;
             return {
               vacancy: vacancy,
               taxes: propTaxes,
@@ -283,6 +293,7 @@ const getPortolioPropertiesObjects = (
               hoa: hoa,
               maintenance: capEx,
               utils: utils,
+              otherExpenses: otherExpenses,
               total: total,
             };
           })(),
@@ -291,7 +302,7 @@ const getPortolioPropertiesObjects = (
             initialBalance: property.loans[0].loanBalance,
             currentBalance: property.loans[0].startingBalance,
             interestRate: property.loans[0].interestRate,
-            pmi: 0,
+            pmi: property.loans[0].pmi,
             extraPayments: property.loans[0].extraPayement,
             monthlyPayment:
               amortizationResponseNonTarget[property.uuid]?.summary

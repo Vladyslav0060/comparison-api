@@ -20,6 +20,7 @@ interface LoanObjectProps {
   interestRate: number;
   extraPayement: number;
   balanceCurrent: number;
+  pmi: number;
 }
 
 export interface PortfolioForecastingProps {
