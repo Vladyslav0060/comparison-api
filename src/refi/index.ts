@@ -284,6 +284,10 @@ async function getTargetProperty(
     const ni_cashflow =
       (monthly_noi - newInvestmentAmortization.summary.monthlyPayment) * 12;
     const totalcashoutlay = available_equity + closingcosts;
+    const rt_totalcashoutlay =
+      refinanced_target.currentValue -
+      refinanced_target.currentValue * req.new_downpayment_target +
+      refinanced_target.closingCosts;
     const rt_noi =
       (refinanced_target.avgRent +
         refinanced_target.otherIncome -
@@ -299,7 +303,8 @@ async function getTargetProperty(
       ((rt_valuation * 0.85) / 27.5) * req.default_values.new_taxRate;
     const rt_arbdownpayment =
       refiForecasting[0].cumulativeAppreciations.mortgagePaydown;
-    const rt_equity = available_equity;
+    const rt_equity =
+      refinanced_target.currentValue * req.new_downpayment_target;
     const ni_arbappreciation =
       ni_valuation * req.default_values.new_appreciation;
     const ni_arbdepreciation =
@@ -307,18 +312,20 @@ async function getTargetProperty(
     const ni_arbdownpayment =
       newInvestmentForecasting[0].cumulativeAppreciations.mortgagePaydown;
     const ni_equity = available_equity;
-    console.log(target_property?.avgRent);
+
     const res = [
       {
         uid: "refi_target",
         name: `Refinanced ${target_property?.name}`,
         valuation: rt_valuation,
-        loanBalance: refinanced_target.currentValue - available_equity,
+        loanBalance:
+          refinanced_target.currentValue -
+          refinanced_target.currentValue * req.new_downpayment_target,
         equity: rt_equity,
         cashFlow: rt_cashflow,
         NOI: rt_noi,
         arb: {
-          cashOnCash: (rt_cashflow / totalcashoutlay) * 100,
+          cashOnCash: (rt_cashflow / rt_totalcashoutlay) * 100,
           avarageCap: (rt_noi / rt_valuation) * 100,
           rentMultiplier: rt_valuation / rt_noi,
           arbAppreciation: rt_arbappreciation,
@@ -364,8 +371,12 @@ async function getTargetProperty(
           totalYears: refinanced_target.loans.reduce((maxYears, loan) => {
             return Math.max(maxYears, loan.mortgageYears);
           }, 0),
-          initialBalance: rt_valuation - available_equity,
-          currentBalance: rt_valuation - available_equity,
+          initialBalance:
+            refinanced_target.currentValue -
+            refinanced_target.currentValue * req.new_downpayment_target,
+          currentBalance:
+            refinanced_target.currentValue -
+            refinanced_target.currentValue * req.new_downpayment_target,
           interestRate: refinanced_target.loans[0].interestRate,
           pmi: 0,
           extraPayments: refinanced_target.loans[0].extraPayement,
@@ -380,10 +391,11 @@ async function getTargetProperty(
           management: req.default_values.new_management,
         },
         acquisition: {
-          totalCashOutlay: available_equity + closingcosts,
+          totalCashOutlay: rt_totalcashoutlay,
           purchasePrice: rt_valuation,
-          closingCosts: closingcosts,
-          downPayment: available_equity,
+          closingCosts: refinanced_target.closingCosts,
+          downPayment:
+            refinanced_target.currentValue * req.new_downpayment_target,
           repairCosts: 0,
         },
         picture: target_property?.picture,
