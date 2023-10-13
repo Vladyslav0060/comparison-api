@@ -212,7 +212,7 @@ function getNonTargetProperty(
       initialBalance: item.loans[0].loanBalance,
       currentBalance: item.loans[0].startingBalance,
       interestRate: item.loans[0].interestRate,
-      pmi: 0,
+      pmi: item.loans[0].pmi,
       extraPayments: item.loans[0].extraPayement,
       monthlyPayment:
         amortizationResponseNonTarget[item.uuid]?.summary.monthlyPayment ||
