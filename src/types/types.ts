@@ -67,6 +67,7 @@ export interface Request_1031_Props {
   target_property: string;
   target_portfolio: string;
   scenario_level: string;
+  remove_primary?: boolean;
   default_values: {
     new_appreciation: number;
     new_closingCosts: number;

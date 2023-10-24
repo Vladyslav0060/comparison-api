@@ -198,7 +198,7 @@ const getPortolioPropertiesObjects = (
             repairCosts: 0,
           },
           taxRate: req.default_values.new_taxRate,
-          picture: property.picture,
+          picture: "",
           ROE:
             (arbappreciation + arbdepreciation + arbdownpayment + cashflow) /
             equity,
@@ -441,12 +441,18 @@ export const start = async (
     const target_portfolio = req.portfolios.find(
       (p) => p.id === req.target_portfolio
     );
-
-    target_portfolio &&
+    if (target_portfolio) {
+      if (req.remove_primary) {
+        target_portfolio.properties = target_portfolio.properties.filter(
+          (item) => item.uuid !== req.target_property
+        );
+      }
       req.portfolios.push({
         ...target_portfolio,
         id: `clone-${target_portfolio.id}`,
       });
+    }
+
     const targetAmortization = await getAmortization(req, env);
     const portfolios = await Promise.all(
       req.portfolios.map(async (portfolio, idx = 0) => {

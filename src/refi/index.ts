@@ -488,7 +488,7 @@ async function getTargetProperty(
           downPayment: available_equity,
           repairCosts: 0,
         },
-        picture: target_property?.picture,
+        picture: "",
         taxRate: req.default_values.new_taxRate,
         ROE:
           (ni_arbappreciation +
@@ -641,19 +641,21 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
     const target_portfolio = req.portfolios.find(
       (p) => p.id === req.target_portfolio
     );
-    const target_property =
-      target_portfolio?.properties.find(
-        (p) => p.uuid === req.target_property
-      ) || null;
 
     const targetAmortization = await getAmortization(req, env);
 
-    target_portfolio &&
-      target_property &&
+    if (target_portfolio) {
+      if (req.remove_primary) {
+        target_portfolio.properties = target_portfolio.properties.filter(
+          (item) => item.uuid !== req.target_property
+        );
+      }
       req.portfolios.push({
         ...target_portfolio,
         id: `clone-${target_portfolio.id}`,
       });
+    }
+
     const portfolios = await Promise.all(
       req.portfolios.map(async (portfolio, idx = 0) => {
         const forecastingRequestObjects = await getForecastingRequestObjects(
