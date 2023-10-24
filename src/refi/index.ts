@@ -645,15 +645,17 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
     const targetAmortization = await getAmortization(req, env);
 
     if (target_portfolio) {
-      if (req.remove_primary) {
-        target_portfolio.properties = target_portfolio.properties.filter(
-          (item) => item.uuid !== req.target_property
-        );
-      }
-      req.portfolios.push({
+      const clone = {
         ...target_portfolio,
         id: `clone-${target_portfolio.id}`,
-      });
+      };
+
+      if (req.remove_primary) {
+        clone.properties = clone.properties.filter(
+          (p) => p.uuid !== req.target_property
+        );
+      }
+      req.portfolios.push(clone);
     }
 
     const portfolios = await Promise.all(
