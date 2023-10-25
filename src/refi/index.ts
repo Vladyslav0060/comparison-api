@@ -418,7 +418,7 @@ async function getTargetProperty(
         arb: {
           cashOnCash: (ni_cashflow / totalcashoutlay) * 100,
           avarageCap: (ni_noi / ni_valuation) * 100,
-          rentMultiplier: (ni_valuation / ni_noi) * 100,
+          rentMultiplier: ni_valuation / ni_noi,
           arbAppreciation: ni_valuation * req.default_values.new_appreciation,
           arbDepreciation:
             ((ni_valuation * 0.85) / 27.5) * req.default_values.new_taxes,
