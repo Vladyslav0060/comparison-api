@@ -327,7 +327,9 @@ async function getTargetProperty(
         arb: {
           cashOnCash: (rt_cashflow / rt_totalcashoutlay) * 100,
           avarageCap: (rt_noi / rt_valuation) * 100,
-          rentMultiplier: rt_valuation / rt_noi,
+          rentMultiplier:
+            rt_valuation /
+            ((target_property?.avgRent + refinanced_target.otherIncome) * 12),
           arbAppreciation: rt_arbappreciation,
           arbDepreciation: rt_arbdepreciation,
           arbDownPayment: rt_arbdownpayment,
@@ -418,7 +420,7 @@ async function getTargetProperty(
         arb: {
           cashOnCash: (ni_cashflow / totalcashoutlay) * 100,
           avarageCap: (ni_noi / ni_valuation) * 100,
-          rentMultiplier: ni_valuation / ni_noi,
+          rentMultiplier: ni_valuation / (monthly_rents * 12),
           arbAppreciation: ni_valuation * req.default_values.new_appreciation,
           arbDepreciation:
             ((ni_valuation * 0.85) / 27.5) * req.default_values.new_taxes,
