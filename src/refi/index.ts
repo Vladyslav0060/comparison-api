@@ -252,7 +252,6 @@ async function getTargetProperty(
     const target_property = portfolio.properties.find(
       (p) => p.uuid === req.target_property
     );
-    console.log({ target_property });
     const temp = temp_vars(target_property, req);
     if (!temp) throw new Error("No target property found");
     const { available_equity, monthly_noi, monthly_rents } = temp;
@@ -500,6 +499,7 @@ async function getTargetProperty(
           ni_equity,
       },
     ];
+    if (req.remove_primary) res.shift();
     return res;
   } catch (error) {
     console.error("❌ getTargetProperty: ", error);

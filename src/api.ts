@@ -11,8 +11,6 @@ import {
 
 const getForecasting = async (forecastingRequestObjects: any, env: Env) => {
   try {
-    // console.log("getForecasting", forecastingRequestObjects);
-    // console.log("TEST: ", forecastingRequestObjects[0].array);
     let forecatingResponse: ForecastingResponseObjectProps[] = [];
     const fetchPromises = forecastingRequestObjects.map(
       async (requestObj: any) => {
@@ -27,7 +25,6 @@ const getForecasting = async (forecastingRequestObjects: any, env: Env) => {
     );
 
     const res = await Promise.all(fetchPromises);
-    // console.log(res);
     return res;
   } catch (error) {
     console.error("❌ getForecasting: ", error);
@@ -51,7 +48,6 @@ const getAmortization = async (req: Request_1031_Props, env: Env) => {
     interestRate: (newInterestRate * 100).toString(),
     termInMonths: (30 * 12).toString(),
   });
-  console.log(params);
   const amortizationResponse: AmortizationResponseProps = await fetch(
     `${env.AMORTIZATION_URL}/?${params}`
   ).then((res) => res.json());
@@ -103,7 +99,6 @@ const getRefiForecasting = async (req: PortfolioForecastingProps, env: Env) => {
     const forecastingRequestObject: any = {
       array: [req],
     };
-    // console.log("forecastingRequestObject: ", forecastingRequestObject);
     const data = await fetch(env.FORECASTING_URL, {
       method: "POST",
       body: JSON.stringify(forecastingRequestObject),

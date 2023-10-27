@@ -340,7 +340,6 @@ const buildPortfolioResponse = (
   portfolio_name: string,
   isTargetPortfolio = false
 ): PortfolioResponseProps => {
-  // console.log("build properties: ", properties);
   const { valuationSum, equitySum, loanBalancesSum, noiSum, cashflowSum } =
     properties.reduce(
       (acc, item) => {
