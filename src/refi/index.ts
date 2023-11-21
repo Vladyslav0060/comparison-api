@@ -369,9 +369,7 @@ async function getTargetProperty(
           };
         })(),
         loans: {
-          totalYears: refinanced_target.loans.reduce((maxYears, loan) => {
-            return Math.max(maxYears, loan.mortgageYears);
-          }, 0),
+          totalYears: 30,
           initialBalance:
             refinanced_target.currentValue -
             refinanced_target.currentValue * req.new_downpayment_target,
@@ -462,9 +460,7 @@ async function getTargetProperty(
           };
         })(),
         loans: {
-          totalYears: new_investment.loans.reduce((maxYears, loan) => {
-            return Math.max(maxYears, loan.mortgageYears);
-          }, 0),
+          totalYears: 30,
           initialBalance:
             available_equity / req.new_downpaymment - available_equity,
           currentBalance:
@@ -574,12 +570,8 @@ const buildPortfolioResponse = (
     return item.arb.arbDownPayment + acc;
   }, 0);
 
-  const currentDate = new Date();
-  const options = { year: "numeric", month: "long", day: "numeric" };
-  const formattedDate = currentDate.toLocaleDateString(undefined, options);
-
   return {
-    name: isTargetPortfolio ? `Refi - ${formattedDate}` : portfolio_name,
+    name: isTargetPortfolio ? "Refi" : portfolio_name,
     cashFlow: cashflowSum,
     arb: {
       arbAppreciation: arbAppreciationSum,

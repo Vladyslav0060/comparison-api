@@ -170,9 +170,7 @@ const getPortolioPropertiesObjects = (
             };
           })(),
           loans: {
-            totalYears: property.loans.reduce((maxYears, loan) => {
-              return Math.max(maxYears, loan.mortgageYears);
-            }, 0),
+            totalYears: 30,
             initialBalance:
               available_equity / req.new_downpaymment - available_equity,
             currentBalance:
@@ -368,14 +366,9 @@ const buildPortfolioResponse = (
   const arbDownpaymentSum = properties.reduce((acc, item) => {
     return item.arb.arbDownPayment + acc;
   }, 0);
-  const currentDate = new Date();
-  const options = { year: "numeric", month: "long", day: "numeric" };
-  const formattedDate = currentDate.toLocaleDateString(undefined, options);
 
   return {
-    name: isTargetPortfolio
-      ? `1031 Exchange - ${formattedDate}`
-      : portfolio_name,
+    name: isTargetPortfolio ? "1031 Exchange" : portfolio_name,
     cashFlow: cashflowSum,
     arb: {
       arbAppreciation: arbAppreciationSum,
