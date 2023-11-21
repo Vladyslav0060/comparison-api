@@ -136,7 +136,7 @@ function getNonTargetProperty(
     (item.avgRent +
       item.otherIncome -
       allExpensesSum -
-      item.vacancyLossPercentage * (item.avgRent + item.otherIncome)) *
+      item.vacancyLossPercentage * item.avgRent) *
     12;
   const temp_non_target = amortizationResponseNonTarget[item.uuid];
   const cashflow =

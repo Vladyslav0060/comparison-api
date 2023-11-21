@@ -216,8 +216,7 @@ const getPortolioPropertiesObjects = (
           (property.avgRent +
             property.otherIncome -
             allExpensesSum -
-            property.vacancyLossPercentage *
-              (property.avgRent + property.otherIncome)) *
+            property.vacancyLossPercentage * property.avgRent) *
           12;
         const temp_non_target = amortizationResponseNonTarget[property.uuid];
         const cashflow =
