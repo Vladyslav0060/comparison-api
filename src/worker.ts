@@ -58,7 +58,7 @@ const getPortolioPropertiesObjects = (
   let result: PropertiesProps[];
   result = portfolio.properties.flatMap((property) => {
     const isTargetProperty = property.uuid === req.target_property;
-    if (isTargetProperty && isTargetPortfolio) {
+    if (isTargetProperty && isTargetPortfolio && targetAmortization) {
       return (() => {
         const propertyForecasting = Object.values(
           forecasting.find((f) => Object.keys(f)[0] === property.uuid)
@@ -458,6 +458,7 @@ export const start = async (
           forecastingRequestObjects,
           env
         );
+        console.log(forecatingResponse[0]);
         const amortizationResponseNonTarget: AmortizationNonTargetType =
           await getAmortizationNonTarget(portfolio, env);
         const portfolio_res = getPortfolioResponse(

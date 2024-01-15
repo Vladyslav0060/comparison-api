@@ -43,17 +43,23 @@ const getForecastingRequestObjects = (
   portfolio: PortfolioProps
 ): any => {
   try {
-    const { target_property } = req;
-    const object = portfolio.properties.find(
-      (item) => item.uuid === target_property
-    );
-    // if (!object) throw new Error("Object with this uuid is not found");
-    // if (!object) return null;
-
     const { available_equity, monthly_rents, mothlyNOI } = getTempVariables(
       req,
       portfolio
     );
+    const { target_property } = req;
+    const object = portfolio.properties.find(
+      (item) => item.uuid === target_property
+    );
+    const piWithUpdatedInvestmentValue = [
+      {
+        ...req.passive_investments[0],
+        investment_value: available_equity,
+      },
+      ...req.passive_investments.slice(1),
+    ];
+    console.log("piWithUpdatedInvestmentValue", piWithUpdatedInvestmentValue);
+
     const result = portfolio.properties.map((property) => {
       return {
         array:
@@ -112,8 +118,14 @@ const getForecastingRequestObjects = (
                 },
               ]
             : [property],
+        passive_investments:
+          portfolio.id === req.target_portfolio &&
+          property.uuid === req.target_property
+            ? req.passive_investments
+            : null,
       };
     });
+
     return result;
   } catch (error) {
     console.log(error);

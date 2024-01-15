@@ -1,4 +1,5 @@
 import { startRefi } from "./refi";
+import { startPI } from "./pi";
 import { Request_1031_Props, Env } from "./types/types";
 import { start } from "./worker";
 
@@ -16,6 +17,9 @@ async function fetch(request: Request, env: Env, ctx: ExecutionContext) {
         break;
       case "refi":
         response = await startRefi(body, env);
+        break;
+      case "pi":
+        response = await startPI(body, env);
         break;
       default:
         throw new Error("Scenario type is not found");

@@ -62,6 +62,13 @@ export interface PortfolioProps {
   properties: PropertyPortfolioProps[];
 }
 
+export interface PassiveInvestmentProps {
+  name: string;
+  uid: string;
+  investment_value: number;
+  years: { year: number; cashflow_grow: number; equity_grow: number }[];
+}
+
 export interface Request_1031_Props {
   scenario_type: string | number;
   target_property: string;
@@ -90,6 +97,7 @@ export interface Request_1031_Props {
   new_loan_interest_rate: number;
   user_id: string;
   portfolios: PortfolioProps[];
+  passive_investments: PassiveInvestmentProps[];
 }
 
 export type AmortizationNonTargetType = {
@@ -210,6 +218,7 @@ export type PortfolioResponseProps = {
   };
   properties: PropertiesProps[];
   forecasting: ForecastingResponseObjectProps;
+  pi?: PassiveInvestmentProps[];
 };
 
 export type ComparisonResponseObjectProps = {
@@ -218,7 +227,7 @@ export type ComparisonResponseObjectProps = {
     target_portfolio: string;
     refinanced_property: string;
     "new-investemnt-id": string;
-    portfolios: PortfolioResponseProps[];
+    portfolios: (PortfolioResponseProps | undefined)[];
   };
 };
 

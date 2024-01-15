@@ -14,11 +14,7 @@ import {
   PortfolioProps,
   PropertiesProps,
 } from "../types/types";
-import {
-  Request_1031_Props,
-  TargetPortfolioProps,
-  PortfolioForecastingProps,
-} from "../types/types";
+import { Request_1031_Props, PortfolioForecastingProps } from "../types/types";
 import { getForecastingRequestObjects } from "../utils";
 
 type TempVarsProps = {
@@ -28,7 +24,7 @@ type TempVarsProps = {
 };
 
 const temp_vars = (
-  target_property: TargetPortfolioProps | PortfolioForecastingProps | undefined,
+  target_property: PortfolioForecastingProps | undefined,
   body: Request_1031_Props
 ): TempVarsProps | null => {
   try {
@@ -215,8 +211,8 @@ function getNonTargetProperty(
       pmi: item.loans[0].pmi,
       extraPayments: item.loans[0].extraPayement,
       monthlyPayment:
-        amortizationResponseNonTarget[item.uuid]?.summary.monthlyPayment ||
-        amortizationResponse[item.uuid]?.summary.monthlyPayment,
+        amortizationResponseNonTarget[item.uuid]?.summary.monthlyPayment,
+      // || amortizationResponse[item.uuid]?.summary.monthlyPayment,
     },
     assumptions: {
       expenseInflation: item.annualOperatingExpenseIncrease,
@@ -328,7 +324,8 @@ async function getTargetProperty(
           avarageCap: (rt_noi / rt_valuation) * 100,
           rentMultiplier:
             rt_valuation /
-            ((target_property?.avgRent + refinanced_target.otherIncome) * 12),
+            ((target_property?.avgRent || 0 + refinanced_target.otherIncome) *
+              12),
           arbAppreciation: rt_arbappreciation,
           arbDepreciation: rt_arbdepreciation,
           arbDownPayment: rt_arbdownpayment,

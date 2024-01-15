@@ -14,12 +14,14 @@ const getForecasting = async (forecastingRequestObjects: any, env: Env) => {
     let forecatingResponse: ForecastingResponseObjectProps[] = [];
     const fetchPromises = forecastingRequestObjects.map(
       async (requestObj: any) => {
+        // console.log(requestObj.passive_investments[0]);
         const data = await fetch(env.FORECASTING_URL, {
           method: "POST",
           body: JSON.stringify(requestObj),
         });
         forecatingResponse =
           (await data.json()) as ForecastingResponseObjectProps[];
+        // console.log("forecatingResponse", forecatingResponse);
         return { [requestObj.array[0].uuid]: forecatingResponse };
       }
     );
@@ -149,6 +151,34 @@ const getAmortizationNonTarget = async (
   return response;
 };
 
+const getPIForecasting = async (
+  req: PortfolioForecastingProps,
+  passive_investments: any,
+  env: Env
+) => {
+  // const forecastingRequestObject: any = getForecastingRequestObject(req);
+  let forecatingResponse: ForecastingResponseObjectProps[] = [];
+  try {
+    const forecastingRequestObject: any = {
+      array: req,
+      passive_investments: passive_investments,
+    };
+    console.log(JSON.stringify(forecastingRequestObject));
+    const data = await fetch(env.FORECASTING_URL, {
+      method: "POST",
+      body: JSON.stringify(forecastingRequestObject),
+    });
+
+    forecatingResponse =
+      (await data.json()) as ForecastingResponseObjectProps[];
+    // console.log("forecatingResponse", forecatingResponse);
+    return forecatingResponse;
+  } catch (error) {
+    console.error("❌ getForecasting REFI: ", error);
+    throw error;
+  }
+};
+
 const getFinalForecasting = async (properties: PropertiesProps[], env: Env) => {
   const forecastingRequestArray = getForecastingBodyFromPorfolio(properties);
   let forecatingResponse: ForecastingResponseObjectProps;
@@ -162,6 +192,7 @@ const getFinalForecasting = async (properties: PropertiesProps[], env: Env) => {
 
 export {
   getForecasting,
+  getPIForecasting,
   getAmortization,
   getAmortizationNonTarget,
   getRefiAmortization,
