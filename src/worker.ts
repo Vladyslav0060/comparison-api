@@ -445,7 +445,7 @@ export const start = async (
       }
       req.portfolios.push(clone);
     }
-
+    let passive_investments_object: any = null;
     const targetAmortization = await getAmortization(req, env);
     const portfolios = await Promise.all(
       req.portfolios.map(async (portfolio, idx = 0) => {
@@ -458,7 +458,16 @@ export const start = async (
           forecastingRequestObjects,
           env
         );
-        console.log(forecatingResponse[0]);
+
+        forecatingResponse.forEach((forecatingResponse) => {
+          const value = Object.values(forecatingResponse).filter(
+            (item) => !!item?.[0].passive_investments
+          );
+          if (value.length) {
+            passive_investments_object = value[0];
+          }
+        });
+
         const amortizationResponseNonTarget: AmortizationNonTargetType =
           await getAmortizationNonTarget(portfolio, env);
         const portfolio_res = getPortfolioResponse(
@@ -476,6 +485,36 @@ export const start = async (
         return portfolio_res;
       })
     );
+
+    let piObject = portfolios.find(
+      (portfolio) =>
+        portfolio?.name === "1031 Exchange" && req.passive_investments?.[0]
+    );
+    if (piObject) {
+      piObject = { ...piObject };
+      piObject.name = "PI Exchange";
+      piObject.properties = piObject.properties.filter(
+        (prop) => prop.uid !== "new_investment"
+      );
+      if (!!passive_investments_object?.[0].passive_investments) {
+        piObject.pi = passive_investments_object.map(
+          (po) => po.passive_investments
+        );
+      }
+      const recalculatedPIPortfolio = buildPortfolioResponse(
+        piObject.properties,
+        piObject.uuid,
+        piObject.name,
+        false
+      );
+      const temps = getTempVariables(req);
+      const investment_value = temps?.available_equity || 0;
+      recalculatedPIPortfolio.valuation += investment_value;
+      recalculatedPIPortfolio.equity += investment_value;
+      portfolios.push(recalculatedPIPortfolio);
+      // portfolios.push(piObject);
+    }
+
     const response: ComparisonResponseObjectProps = {
       comparison: {
         "new-investemnt-id": req.target_property,

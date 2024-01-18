@@ -25,8 +25,8 @@ const getTempVariables = (
       valuation: 0,
     };
   const available_equity =
-    req.scenario_type === "1031"
-      ? object.currentValue - object.loans[0].startingBalance
+    req.scenario_type === "1031" || req.scenario_type === "pi"
+      ? object.currentValue - object.loans[0].balanceCurrent
       : object.currentValue -
         object.loans[0].startingBalance -
         object.currentValue * req.new_downpaymment;
@@ -47,18 +47,15 @@ const getForecastingRequestObjects = (
       req,
       portfolio
     );
-    const { target_property } = req;
-    const object = portfolio.properties.find(
-      (item) => item.uuid === target_property
-    );
-    const piWithUpdatedInvestmentValue = [
-      {
-        ...req.passive_investments[0],
-        investment_value: available_equity,
-      },
-      ...req.passive_investments.slice(1),
-    ];
-    console.log("piWithUpdatedInvestmentValue", piWithUpdatedInvestmentValue);
+    const piWithUpdatedInvestmentValue = req?.passive_investments?.[0]
+      ? [
+          {
+            ...req.passive_investments[0],
+            investment_value: available_equity,
+          },
+          ...req.passive_investments.slice(1),
+        ]
+      : null;
 
     const result = portfolio.properties.map((property) => {
       return {
@@ -121,11 +118,10 @@ const getForecastingRequestObjects = (
         passive_investments:
           portfolio.id === req.target_portfolio &&
           property.uuid === req.target_property
-            ? req.passive_investments
+            ? piWithUpdatedInvestmentValue
             : null,
       };
     });
-
     return result;
   } catch (error) {
     console.log(error);

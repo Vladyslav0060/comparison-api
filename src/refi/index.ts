@@ -15,7 +15,7 @@ import {
   PropertiesProps,
 } from "../types/types";
 import { Request_1031_Props, PortfolioForecastingProps } from "../types/types";
-import { getForecastingRequestObjects } from "../utils";
+import { getForecastingRequestObjects, getTempVariables } from "../utils";
 
 type TempVarsProps = {
   available_equity: number;
@@ -32,7 +32,7 @@ const temp_vars = (
     const available_equity =
       target_property.currentValue -
       target_property.loans[0].balanceCurrent -
-      target_property.currentValue * body.new_downpaymment;
+      target_property.currentValue * body.new_downpayment_target;
     const monthly_noi =
       (available_equity * body.new_caprate) / 12 / body.new_downpaymment;
     const monthly_rents =
@@ -307,7 +307,6 @@ async function getTargetProperty(
     const ni_arbdownpayment =
       newInvestmentForecasting[0].cumulativeAppreciations.mortgagePaydown;
     const ni_equity = available_equity;
-
     const res = [
       {
         uid: "refi_target",
@@ -632,7 +631,7 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
     const target_portfolio = req.portfolios.find(
       (p) => p.id === req.target_portfolio
     );
-
+    let passive_investments_object: any = null;
     const targetAmortization = await getAmortization(req, env);
 
     if (target_portfolio) {
@@ -661,6 +660,15 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
           env
         );
 
+        forecatingResponse.forEach((forecatingResponse) => {
+          const value = Object.values(forecatingResponse).filter(
+            (item) => !!item?.[0].passive_investments
+          );
+          if (value.length) {
+            passive_investments_object = value[0];
+          }
+        });
+
         const amortizationResponseNonTarget: AmortizationNonTargetType =
           await getAmortizationNonTarget(portfolio, env);
 
@@ -680,6 +688,38 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
         return portfolio_res;
       })
     );
+
+    let piObject = portfolios.find(
+      (portfolio) => portfolio?.name === "Refi" && req.passive_investments?.[0]
+    );
+
+    if (piObject) {
+      piObject = { ...piObject };
+      piObject.name = "PI Exchange";
+      piObject.properties = piObject.properties.filter(
+        (prop) => prop.uid !== "new_investment"
+      );
+      if (!!passive_investments_object?.[0].passive_investments) {
+        piObject.pi = passive_investments_object.map(
+          (po) => po.passive_investments
+        );
+      }
+      const recalculatedPIPortfolio = buildPortfolioResponse(
+        piObject.properties,
+        piObject.uuid,
+        piObject.name,
+        false
+      );
+      const target_property = target_portfolio?.properties.find(
+        (p) => p.uuid === req.target_property
+      );
+      const temps = temp_vars(target_property, req);
+      const investment_value = temps?.available_equity || 0;
+      recalculatedPIPortfolio.valuation += investment_value;
+      recalculatedPIPortfolio.equity += investment_value;
+      portfolios.push(recalculatedPIPortfolio);
+    }
+
     const response: ComparisonResponseObjectProps = {
       comparison: {
         "new-investemnt-id": req.target_property,

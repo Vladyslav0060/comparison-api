@@ -53,158 +53,8 @@ const getPortolioPropertiesObjects = (
   targetAmortization: AmortizationResponseProps | undefined,
   forecasting: any[]
 ) => {
-  const isTargetPortfolio = portfolio.id === req.target_portfolio;
-  const { available_equity, monthly_rents, mothlyNOI, valuation } =
-    getTempVariables(req);
   let result: PropertiesProps[];
   result = portfolio.properties.flatMap((property) => {
-    const isTargetProperty = property.uuid === req.target_property;
-
-    // if (isTargetProperty && isTargetPortfolio) {
-    //   return (() => {
-    //     const propertyForecasting = Object.values(
-    //       forecasting.find((f) => Object.keys(f)[0] === property.uuid)
-    //     )[0];
-    //     const allExpensesSum = Object.values(property.allExpenses).reduce(
-    //       (acc, item) => acc + item,
-    //       0
-    //     );
-    //     const noi =
-    //       property.uuid === req.target_property
-    //         ? mothlyNOI * 12
-    //         : (property.avgRent +
-    //             property.otherIncome -
-    //             allExpensesSum -
-    //             property.vacancyLossPercentage *
-    //               (property.avgRent + property.otherIncome)) *
-    //           12;
-    //     const temp_non_target = amortizationResponseNonTarget[property.uuid];
-
-    //     const cashflow =
-    //       property.uuid === req.target_property
-    //         ? (mothlyNOI - targetAmortization.summary.monthlyPayment) * 12
-    //         : noi - temp_non_target.summary.monthlyPayment * 12;
-
-    //     const closingcosts =
-    //       property.uuid === req.target_property
-    //         ? (req.default_values.new_closingCosts / req.new_downpaymment) *
-    //           available_equity
-    //         : property.closingCosts;
-
-    //     const downpayment =
-    //       property.uuid === req.target_property
-    //         ? available_equity
-    //         : property.downPaymentPerc * property.purchasePrice;
-
-    //     const totalcashoutlay =
-    //       property.uuid === req.target_property
-    //         ? downpayment + closingcosts
-    //         : downpayment + closingcosts + property.repairCosts;
-
-    //     const local_valuation =
-    //       property.uuid === req.target_property
-    //         ? valuation
-    //         : property.currentValue;
-
-    //     const arbappreciation =
-    //       local_valuation * req.default_values.new_appreciation;
-    //     const arbdepreciation =
-    //       ((local_valuation * 0.85) / 27.5) * property.taxRate;
-    //     const arbdownpayment =
-    //       propertyForecasting[0].cumulativeAppreciations.mortgagePaydown;
-    //     const equity = available_equity;
-    //     return {
-    //       //1
-    //       // type: "target",
-    //       uid: "new_investment",
-    //       name: "New Investment",
-    //       valuation: local_valuation,
-    //       loanBalance: local_valuation - available_equity,
-    //       equity: available_equity,
-    //       cashFlow: cashflow,
-    //       NOI: noi,
-    //       arb: {
-    //         cashOnCash: (cashflow / totalcashoutlay) * 100,
-    //         avarageCap: (noi / local_valuation) * 100,
-    //         rentMultiplier: local_valuation / (monthly_rents * 12),
-    //         arbAppreciation:
-    //           local_valuation * req.default_values.new_appreciation,
-    //         arbDepreciation:
-    //           ((local_valuation * 0.85) / 27.5) * property.taxRate,
-    //         arbDownPayment:
-    //           propertyForecasting[0].cumulativeAppreciations.mortgagePaydown,
-    //         // forecatingResponse[0].cumulativeAppreciations.mortgagePaydown,
-    //       },
-    //       monthlyIncome: {
-    //         rent: monthly_rents,
-    //         otherIncome: 0,
-    //       },
-    //       monthlyExpenses: (() => {
-    //         const vacancy = monthly_rents * req.default_values.new_vacancy;
-    //         const taxes = monthly_rents * req.default_values.new_taxes;
-    //         const insurance = monthly_rents * req.default_values.new_insurance;
-    //         const management =
-    //           monthly_rents * req.default_values.new_management;
-    //         const hoa = monthly_rents * req.default_values.new_hoa;
-    //         const maintenance =
-    //           monthly_rents * req.default_values.new_maintenance;
-    //         const utils = monthly_rents * req.default_values.new_utils;
-    //         const otherExpenses = 0;
-    //         const total =
-    //           vacancy +
-    //           taxes +
-    //           insurance +
-    //           management +
-    //           hoa +
-    //           maintenance +
-    //           otherExpenses +
-    //           utils;
-    //         return {
-    //           vacancy: vacancy,
-    //           taxes: taxes,
-    //           insurance: insurance,
-    //           management: management,
-    //           hoa: hoa,
-    //           maintenance: maintenance,
-    //           utils: utils,
-    //           otherExpenses: otherExpenses,
-    //           total: total,
-    //         };
-    //       })(),
-    //       loans: {
-    //         totalYears: 30,
-    //         initialBalance:
-    //           available_equity / req.new_downpaymment - available_equity,
-    //         currentBalance:
-    //           available_equity / req.new_downpaymment - available_equity,
-    //         interestRate: req.new_loan_interest_rate,
-    //         pmi: 0,
-    //         extraPayments: 0,
-    //         monthlyPayment: targetAmortization.summary.monthlyPayment,
-    //       },
-    //       assumptions: {
-    //         expenseInflation: req.default_values.new_expensInflation,
-    //         rentalGrowth: req.default_values.new_rentalGrowth,
-    //         appreciation: req.default_values.new_appreciation,
-    //         maintenance: req.default_values.new_maintenance,
-    //         vacancy: req.default_values.new_vacancy,
-    //         management: req.default_values.new_management,
-    //       },
-    //       acquisition: {
-    //         totalCashOutlay: totalcashoutlay,
-    //         purchasePrice: local_valuation,
-    //         closingCosts: closingcosts,
-    //         downPayment: downpayment,
-    //         repairCosts: 0,
-    //       },
-    //       taxRate: req.default_values.new_taxRate,
-    //       picture: "",
-    //       ROE:
-    //         (arbappreciation + arbdepreciation + arbdownpayment + cashflow) /
-    //         equity,
-    //     };
-    //   })();
-    // } else
     return (() => {
       const propertyForecasting = Object.values(
         forecasting.find((f) => Object.keys(f)[0] === property.uuid)
@@ -478,11 +328,23 @@ export const startPI = async (
             !!f?.[req.target_property]?.[0].passive_investments
           );
         });
-        // console.log("pi_object", pi_object?.[req.target_property]);
-        portfolio_res.pi = pi_object?.[req.target_property];
+        portfolio_res.pi = pi_object?.[req.target_property].map(
+          (item) => item.passive_investments
+        );
+        if (portfolio_res.uuid === req.target_portfolio) {
+          portfolio_res.properties = portfolio_res.properties.filter(
+            (prop) => prop.uid !== req.target_property
+          );
+        }
         return portfolio_res;
       })
     );
+    const { available_equity = 0 } = getTempVariables(req);
+    const piPortfolio = portfolios.find((p) => p?.name === "PI Exchange");
+    if (piPortfolio) {
+      piPortfolio.equity += available_equity;
+      piPortfolio.valuation += available_equity;
+    }
     const response: ComparisonResponseObjectProps = {
       comparison: {
         "new-investemnt-id": req.target_property,

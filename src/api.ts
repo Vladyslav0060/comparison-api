@@ -14,14 +14,12 @@ const getForecasting = async (forecastingRequestObjects: any, env: Env) => {
     let forecatingResponse: ForecastingResponseObjectProps[] = [];
     const fetchPromises = forecastingRequestObjects.map(
       async (requestObj: any) => {
-        // console.log(requestObj.passive_investments[0]);
         const data = await fetch(env.FORECASTING_URL, {
           method: "POST",
           body: JSON.stringify(requestObj),
         });
         forecatingResponse =
           (await data.json()) as ForecastingResponseObjectProps[];
-        // console.log("forecatingResponse", forecatingResponse);
         return { [requestObj.array[0].uuid]: forecatingResponse };
       }
     );
@@ -56,28 +54,6 @@ const getAmortization = async (req: Request_1031_Props, env: Env) => {
   return amortizationResponse;
 };
 
-// const getAmortization = async (
-//   req: Request_1031_Props,
-//   env: Env
-// ): Promise<AmortizationResponseProps> => {
-//   const mortgageYears =
-//     req.target_portflio.find((item) => item.uuid === req.target_property)
-//       ?.loans[0].mortgageYears || 0;
-//   const { available_equity, valuation } = getTempVariables(req);
-//   const newInterestRate = req.new_loan_interest_rate;
-//   const params = new URLSearchParams({
-//     amount: (valuation - available_equity).toString(),
-//     startingBalance: (valuation - available_equity).toString(),
-//     interestRate: (newInterestRate * 100).toString(),
-//     termInMonths: (mortgageYears * 12).toString(),
-//   });
-
-//   const amortizationResponse: AmortizationResponseProps = await fetch(
-//     `${env.AMORTIZATION_URL}/?${params}`
-//   ).then((res) => res.json());
-//   return amortizationResponse;
-// };
-
 const getRefiAmortization = async (
   req: PortfolioForecastingProps,
   env: Env
@@ -95,7 +71,6 @@ const getRefiAmortization = async (
 };
 
 const getRefiForecasting = async (req: PortfolioForecastingProps, env: Env) => {
-  // const forecastingRequestObject: any = getForecastingRequestObject(req);
   let forecatingResponse: ForecastingResponseObjectProps[] = [];
   try {
     const forecastingRequestObject: any = {
@@ -156,14 +131,12 @@ const getPIForecasting = async (
   passive_investments: any,
   env: Env
 ) => {
-  // const forecastingRequestObject: any = getForecastingRequestObject(req);
   let forecatingResponse: ForecastingResponseObjectProps[] = [];
   try {
     const forecastingRequestObject: any = {
       array: req,
       passive_investments: passive_investments,
     };
-    console.log(JSON.stringify(forecastingRequestObject));
     const data = await fetch(env.FORECASTING_URL, {
       method: "POST",
       body: JSON.stringify(forecastingRequestObject),
@@ -171,7 +144,6 @@ const getPIForecasting = async (
 
     forecatingResponse =
       (await data.json()) as ForecastingResponseObjectProps[];
-    // console.log("forecatingResponse", forecatingResponse);
     return forecatingResponse;
   } catch (error) {
     console.error("❌ getForecasting REFI: ", error);
