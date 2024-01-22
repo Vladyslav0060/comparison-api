@@ -60,7 +60,7 @@ const getPortolioPropertiesObjects = (
     const isTargetProperty = property.uuid === req.target_property;
     if (isTargetProperty && isTargetPortfolio && targetAmortization) {
       return (() => {
-        const propertyForecasting = Object.values(
+        const propertyForecasting: any = Object.values(
           forecasting.find((f) => Object.keys(f)[0] === property.uuid)
         )[0];
         const allExpensesSum = Object.values(property.allExpenses).reduce(
@@ -204,7 +204,7 @@ const getPortolioPropertiesObjects = (
       })();
     } else
       return (() => {
-        const propertyForecasting = Object.values(
+        const propertyForecasting: any = Object.values(
           forecasting.find((f) => Object.keys(f)[0] === property.uuid)
         )[0];
         const allExpensesSum = Object.values(property.allExpenses).reduce(
@@ -461,7 +461,7 @@ export const start = async (
 
         forecatingResponse.forEach((forecatingResponse) => {
           const value = Object.values(forecatingResponse).filter(
-            (item) => !!item?.[0].passive_investments
+            (item: any) => !!item?.[0].passive_investments
           );
           if (value.length) {
             passive_investments_object = value[0];
@@ -498,7 +498,7 @@ export const start = async (
       );
       if (!!passive_investments_object?.[0].passive_investments) {
         piObject.pi = passive_investments_object.map(
-          (po) => po.passive_investments
+          (po: any) => po.passive_investments
         );
       }
       const recalculatedPIPortfolio = buildPortfolioResponse(

@@ -14,7 +14,7 @@ const getForecasting = async (forecastingRequestObjects: any, env: Env) => {
     let forecatingResponse: ForecastingResponseObjectProps[] = [];
     const fetchPromises = forecastingRequestObjects.map(
       async (requestObj: any) => {
-        const data = await fetch(env.FORECASTING_URL, {
+        const data = await env.dev_forecasting.fetch(env.FORECASTING_URL, {
           method: "POST",
           body: JSON.stringify(requestObj),
         });
@@ -48,9 +48,9 @@ const getAmortization = async (req: Request_1031_Props, env: Env) => {
     interestRate: (newInterestRate * 100).toString(),
     termInMonths: (30 * 12).toString(),
   });
-  const amortizationResponse: AmortizationResponseProps = await fetch(
-    `${env.AMORTIZATION_URL}/?${params}`
-  ).then((res) => res.json());
+  const amortizationResponse: AmortizationResponseProps = await env.amortization
+    .fetch(`${env.AMORTIZATION_URL}/?${params}`)
+    .then((res: any) => res.json());
   return amortizationResponse;
 };
 
@@ -64,9 +64,9 @@ const getRefiAmortization = async (
     interestRate: (req.loans[0].interestRate * 100).toString(),
     termInMonths: (req.loans[0].mortgageYears * 12).toString(),
   });
-  const amortizationResponse: AmortizationResponseProps = await fetch(
-    `${env.AMORTIZATION_URL}/?${params}`
-  ).then((res) => res.json());
+  const amortizationResponse: AmortizationResponseProps = await env.amortization
+    .fetch(`${env.AMORTIZATION_URL}/?${params}`)
+    .then((res: any) => res.json());
   return amortizationResponse;
 };
 
@@ -76,7 +76,7 @@ const getRefiForecasting = async (req: PortfolioForecastingProps, env: Env) => {
     const forecastingRequestObject: any = {
       array: [req],
     };
-    const data = await fetch(env.FORECASTING_URL, {
+    const data = await env.dev_forecasting.fetch(env.FORECASTING_URL, {
       method: "POST",
       body: JSON.stringify(forecastingRequestObject),
     });
@@ -105,9 +105,10 @@ const getAmortizationNonTarget = async (
       termInMonths: (mortgageYears * 12).toString(),
     });
 
-    const amortizationResponse: AmortizationResponseProps = await fetch(
-      `${env.AMORTIZATION_URL}?${params}`
-    ).then((res) => res.json());
+    const amortizationResponse: AmortizationResponseProps =
+      await env.amortization
+        .fetch(`${env.AMORTIZATION_URL}?${params}`)
+        .then((res: any) => res.json());
     return {
       [portfolio.uuid]: {
         summary: amortizationResponse.summary,
@@ -137,7 +138,7 @@ const getPIForecasting = async (
       array: req,
       passive_investments: passive_investments,
     };
-    const data = await fetch(env.FORECASTING_URL, {
+    const data = await env.dev_forecasting.fetch(env.FORECASTING_URL, {
       method: "POST",
       body: JSON.stringify(forecastingRequestObject),
     });
@@ -154,7 +155,7 @@ const getPIForecasting = async (
 const getFinalForecasting = async (properties: PropertiesProps[], env: Env) => {
   const forecastingRequestArray = getForecastingBodyFromPorfolio(properties);
   let forecatingResponse: ForecastingResponseObjectProps;
-  const data = await fetch(env.FORECASTING_URL, {
+  const data = await env.dev_forecasting.fetch(env.FORECASTING_URL, {
     method: "POST",
     body: JSON.stringify(forecastingRequestArray),
   });

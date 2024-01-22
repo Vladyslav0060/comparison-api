@@ -3,7 +3,6 @@ import {
   getAmortizationNonTarget,
   getFinalForecasting,
   getForecasting,
-  getPIForecasting,
 } from "../api";
 import {
   AmortizationNonTargetType,
@@ -17,10 +16,7 @@ import {
   Request_1031_Props,
   ComparisonResponseObjectProps,
 } from "../types/types";
-import {
-  getForecastingBodyFromPorfolio,
-  getForecastingRequestObjects,
-} from "../utils";
+import { getForecastingRequestObjects } from "../utils";
 
 const getTempVariables = (req: Request_1031_Props) => {
   const targetPortfolio = req.portfolios.find(
@@ -56,7 +52,7 @@ const getPortolioPropertiesObjects = (
   let result: PropertiesProps[];
   result = portfolio.properties.flatMap((property) => {
     return (() => {
-      const propertyForecasting = Object.values(
+      const propertyForecasting: any = Object.values(
         forecasting.find((f) => Object.keys(f)[0] === property.uuid)
       )[0];
       const allExpensesSum = Object.values(property.allExpenses).reduce(
@@ -329,7 +325,7 @@ export const startPI = async (
           );
         });
         portfolio_res.pi = pi_object?.[req.target_property].map(
-          (item) => item.passive_investments
+          (item: any) => item.passive_investments
         );
         if (portfolio_res.uuid === req.target_portfolio) {
           portfolio_res.properties = portfolio_res.properties.filter(

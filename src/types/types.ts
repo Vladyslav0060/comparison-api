@@ -1,4 +1,6 @@
 export interface Env {
+  amortization: any;
+  dev_forecasting: any;
   FORECASTING_URL: string;
   AMORTIZATION_URL: string;
 }
@@ -217,7 +219,7 @@ export type PortfolioResponseProps = {
     arbDownPayment: number;
   };
   properties: PropertiesProps[];
-  forecasting: ForecastingResponseObjectProps;
+  forecasting?: ForecastingResponseObjectProps;
   pi?: PassiveInvestmentProps[];
 };
 
