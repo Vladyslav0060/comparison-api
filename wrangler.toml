@@ -6,3 +6,6 @@ services = [
   { binding = "dev_forecasting", service = "dev-portfolio-forecasting" },
   { binding = "amortization", service = "loan-amortization-worker" }
 ]
+[vars]
+FORECASTING_URL = "https://dev-portfolio-forecasting.rei-workers.workers.dev"
+AMORTIZATION_URL = "https://loan-amortization-worker.rei-workers.workers.dev/"
