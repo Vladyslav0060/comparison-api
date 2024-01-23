@@ -212,6 +212,12 @@ const buildPortfolioResponse = (
     return item.arb.arbDownPayment + acc;
   }, 0);
 
+  // const { available_equity = 0 } = getTempVariables(req);
+  console.log(
+    "valuationSum, available_equity: ",
+    valuationSum
+    // available_equity
+  );
   return {
     name: isTargetPortfolio ? "PI Exchange" : portfolio_name,
     cashFlow: cashflowSum,

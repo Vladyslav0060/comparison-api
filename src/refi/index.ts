@@ -662,7 +662,7 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
 
         forecatingResponse.forEach((forecatingResponse) => {
           const value = Object.values(forecatingResponse).filter(
-            (item) => !!item?.[0].passive_investments
+            (item: any) => !!item?.[0].passive_investments
           );
           if (value.length) {
             passive_investments_object = value[0];
@@ -697,11 +697,11 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
       piObject = { ...piObject };
       piObject.name = "PI Exchange";
       piObject.properties = piObject.properties.filter(
-        (prop) => prop.uid !== "new_investment"
+        (prop: any) => prop.uid !== "new_investment"
       );
       if (!!passive_investments_object?.[0].passive_investments) {
         piObject.pi = passive_investments_object.map(
-          (po) => po.passive_investments
+          (po: any) => po.passive_investments
         );
       }
       const recalculatedPIPortfolio = buildPortfolioResponse(
@@ -717,6 +717,7 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
       const investment_value = temps?.available_equity || 0;
       recalculatedPIPortfolio.valuation += investment_value;
       recalculatedPIPortfolio.equity += investment_value;
+      recalculatedPIPortfolio.valuation += investment_value;
       portfolios.push(recalculatedPIPortfolio);
     }
 

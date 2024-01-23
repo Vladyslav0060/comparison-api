@@ -161,7 +161,7 @@ export type PropertiesProps = {
     arbDownPayment: number;
   };
   monthlyIncome: {
-    rent: number;
+    rent: number | undefined;
     otherIncome: number;
   };
   monthlyExpenses: {

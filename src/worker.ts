@@ -511,6 +511,7 @@ export const start = async (
       const investment_value = temps?.available_equity || 0;
       recalculatedPIPortfolio.valuation += investment_value;
       recalculatedPIPortfolio.equity += investment_value;
+      recalculatedPIPortfolio.valuation += investment_value;
       portfolios.push(recalculatedPIPortfolio);
       // portfolios.push(piObject);
     }
