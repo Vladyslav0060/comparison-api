@@ -485,7 +485,6 @@ export const start = async (
         return portfolio_res;
       })
     );
-
     let piObject = portfolios.find(
       (portfolio) =>
         portfolio?.name === "1031 Exchange" && req.passive_investments?.[0]
@@ -496,22 +495,30 @@ export const start = async (
       piObject.properties = piObject.properties.filter(
         (prop) => prop.uid !== "new_investment"
       );
+      // if (!!passive_investments_object?.[0].passive_investments) {
+      //   piObject.pi = passive_investments_object.map(
+      //     (po: any) => po.passive_investments
+      //   );
+      // }
+      const recalculatedPIPortfolio: PortfolioResponseProps =
+        buildPortfolioResponse(
+          piObject.properties,
+          piObject.uuid,
+          piObject.name,
+          false
+        );
       if (!!passive_investments_object?.[0].passive_investments) {
-        piObject.pi = passive_investments_object.map(
+        recalculatedPIPortfolio.pi = passive_investments_object.map(
           (po: any) => po.passive_investments
         );
       }
-      const recalculatedPIPortfolio = buildPortfolioResponse(
-        piObject.properties,
-        piObject.uuid,
-        piObject.name,
-        false
-      );
+      // recalculatedPIPortfolio.pi = "test";
       const temps = getTempVariables(req);
       const investment_value = temps?.available_equity || 0;
       recalculatedPIPortfolio.valuation += investment_value;
       recalculatedPIPortfolio.equity += investment_value;
       recalculatedPIPortfolio.valuation += investment_value;
+      recalculatedPIPortfolio.forecasting = piObject?.forecasting;
       portfolios.push(recalculatedPIPortfolio);
       // portfolios.push(piObject);
     }

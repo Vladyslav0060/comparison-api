@@ -12,6 +12,7 @@ import {
   ComparisonResponseObjectProps,
   Env,
   PortfolioProps,
+  PortfolioResponseProps,
   PropertiesProps,
 } from "../types/types";
 import { Request_1031_Props, PortfolioForecastingProps } from "../types/types";
@@ -699,17 +700,23 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
       piObject.properties = piObject.properties.filter(
         (prop: any) => prop.uid !== "new_investment"
       );
+      // if (!!passive_investments_object?.[0].passive_investments) {
+      //   piObject.pi = passive_investments_object.map(
+      //     (po: any) => po.passive_investments
+      //   );
+      // }
+      const recalculatedPIPortfolio: PortfolioResponseProps =
+        buildPortfolioResponse(
+          piObject.properties,
+          piObject.uuid,
+          piObject.name,
+          false
+        );
       if (!!passive_investments_object?.[0].passive_investments) {
-        piObject.pi = passive_investments_object.map(
+        recalculatedPIPortfolio.pi = passive_investments_object.map(
           (po: any) => po.passive_investments
         );
       }
-      const recalculatedPIPortfolio = buildPortfolioResponse(
-        piObject.properties,
-        piObject.uuid,
-        piObject.name,
-        false
-      );
       const target_property = target_portfolio?.properties.find(
         (p) => p.uuid === req.target_property
       );
@@ -718,6 +725,7 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
       recalculatedPIPortfolio.valuation += investment_value;
       recalculatedPIPortfolio.equity += investment_value;
       recalculatedPIPortfolio.valuation += investment_value;
+      recalculatedPIPortfolio.forecasting = piObject?.forecasting;
       portfolios.push(recalculatedPIPortfolio);
     }
 
