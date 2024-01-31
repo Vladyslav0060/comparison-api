@@ -507,10 +507,17 @@ export const start = async (
           piObject.name,
           false
         );
-      if (!!passive_investments_object?.[0].passive_investments) {
-        recalculatedPIPortfolio.pi = passive_investments_object.map(
-          (po: any) => po.passive_investments
-        );
+      if (!!passive_investments_object?.[0]) {
+        recalculatedPIPortfolio.pi = [
+          {
+            name: req.passive_investments[0].name,
+            uid: req.passive_investments[0].uid,
+            // investment_value: req.passive_investments[0].investment_value,
+            years: passive_investments_object.map(
+              (po: any) => po.passive_investments
+            ),
+          },
+        ];
       }
       // recalculatedPIPortfolio.pi = "test";
       const temps = getTempVariables(req);

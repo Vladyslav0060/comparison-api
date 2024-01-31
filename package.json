@@ -9,7 +9,7 @@
   },
   "private": true,
   "scripts": {
-    "start": "wrangler dev",
+    "start": "node api.js && wrangler dev",
     "deploy": "wrangler publish"
   }
 }

@@ -212,12 +212,6 @@ const buildPortfolioResponse = (
     return item.arb.arbDownPayment + acc;
   }, 0);
 
-  // const { available_equity = 0 } = getTempVariables(req);
-  console.log(
-    "valuationSum, available_equity: ",
-    valuationSum
-    // available_equity
-  );
   return {
     name: isTargetPortfolio ? "PI Exchange" : portfolio_name,
     cashFlow: cashflowSum,
@@ -330,9 +324,20 @@ export const startPI = async (
             !!f?.[req.target_property]?.[0].passive_investments
           );
         });
-        portfolio_res.pi = pi_object?.[req.target_property].map(
-          (item: any) => item.passive_investments
-        );
+        portfolio_res.pi = [
+          {
+            name: req.passive_investments[0].name,
+            uid: req.passive_investments[0].uid,
+            // investment_value: req.passive_investments[0].investment_value,
+            years: pi_object?.[req.target_property].map(
+              (item: any) => item.passive_investments
+            ),
+          },
+        ];
+
+        // portfolio_res.pi = pi_object?.[req.target_property].map(
+        //   (item: any) => item.passive_investments
+        // );
         if (portfolio_res.uuid === req.target_portfolio) {
           portfolio_res.properties = portfolio_res.properties.filter(
             (prop) => prop.uid !== req.target_property
