@@ -712,11 +712,22 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
           piObject.name,
           false
         );
-      if (!!passive_investments_object?.[0].passive_investments) {
-        recalculatedPIPortfolio.pi = passive_investments_object.map(
-          (po: any) => po.passive_investments
-        );
+      if (!!passive_investments_object?.[0]) {
+        recalculatedPIPortfolio.pi = [
+          {
+            name: req.passive_investments[0].name,
+            uid: req.passive_investments[0].uid,
+            years: passive_investments_object.map(
+              (po: any) => po.passive_investments
+            ),
+          },
+        ];
       }
+      // if (!!passive_investments_object?.[0].passive_investments) {
+      //   recalculatedPIPortfolio.pi = passive_investments_object.map(
+      //     (po: any) => po.passive_investments
+      //   );
+      // }
       const target_property = target_portfolio?.properties.find(
         (p) => p.uuid === req.target_property
       );
