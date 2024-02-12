@@ -649,12 +649,25 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
       req.portfolios.push(clone);
     }
 
+    let pi_investment_values: any = [];
+
     const portfolios = await Promise.all(
       req.portfolios.map(async (portfolio, idx = 0) => {
         const forecastingRequestObjects = await getForecastingRequestObjects(
           req,
           portfolio
         );
+
+        pi_investment_values =
+          forecastingRequestObjects[0].passive_investments.reduce(
+            (accumulator: any, r: any) => {
+              accumulator[r.uid] = r.investment_value;
+              return accumulator;
+            },
+            {}
+          );
+
+        console.log({ pi_investment_values });
 
         const forecatingResponse = await getForecasting(
           forecastingRequestObjects,
@@ -663,10 +676,10 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
 
         forecatingResponse.forEach((forecatingResponse) => {
           const value = Object.values(forecatingResponse).filter(
-            (item: any) => !!item?.[0].passive_investments
+            (item: any) => !!item?.[0]?.passive_investments
           );
           if (value.length) {
-            passive_investments_object = value[0];
+            passive_investments_object = value;
           }
         });
 
@@ -681,10 +694,23 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
           forecatingResponse,
           env
         );
+
+        const target_property = portfolio.properties.find(
+          (p) => p.uuid === req.target_property
+        );
+        const temp = temp_vars(target_property, req);
+        if (!temp) throw new Error("No target property found");
+        const { available_equity } = temp;
+        const piWithUpdatedInvestmentValue = {
+          ...req.passive_investments?.[0],
+          investment_value: available_equity,
+        };
         const forecastingRes = await getFinalForecasting(
           portfolio_res.properties,
-          env
+          env,
+          [piWithUpdatedInvestmentValue]
         );
+        console.log("forecastingRes refi: ", forecastingRes);
         portfolio_res.forecasting = forecastingRes;
         return portfolio_res;
       })
@@ -712,17 +738,18 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
           piObject.name,
           false
         );
-      if (!!passive_investments_object?.[0]) {
-        recalculatedPIPortfolio.pi = [
-          {
-            name: req.passive_investments[0].name,
-            uid: req.passive_investments[0].uid,
-            years: passive_investments_object.map(
-              (po: any) => po.passive_investments
-            ),
-          },
-        ];
-      }
+      // if (!!passive_investments_object?.[0]) {
+      //   recalculatedPIPortfolio.pi = [
+      //     {
+      //       name: req.passive_investments[0].name,
+      //       uid: req.passive_investments[0].uid,
+      //       years: passive_investments_object.map(
+      //         (po: any) => po.passive_investments
+      //       ),
+      //     },
+      //   ];
+      // }
+
       // if (!!passive_investments_object?.[0].passive_investments) {
       //   recalculatedPIPortfolio.pi = passive_investments_object.map(
       //     (po: any) => po.passive_investments
@@ -733,10 +760,50 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
       );
       const temps = temp_vars(target_property, req);
       const investment_value = temps?.available_equity || 0;
+      const available_equity = temps?.available_equity || 0;
       recalculatedPIPortfolio.valuation += investment_value;
       recalculatedPIPortfolio.equity += investment_value;
       recalculatedPIPortfolio.valuation += investment_value;
-      recalculatedPIPortfolio.forecasting = piObject?.forecasting;
+      // recalculatedPIPortfolio.forecasting = piObject?.forecasting;
+
+      const foundPiPortfolio = req.portfolios.find(
+        (p) => p.id === recalculatedPIPortfolio.uuid
+      );
+
+      if (!foundPiPortfolio) return;
+
+      const passives = foundPiPortfolio.passive_investments?.concat({
+        ...req.passive_investments[0],
+        investment_value: available_equity,
+      });
+
+      const forecastingRes: any = await getFinalForecasting(
+        recalculatedPIPortfolio.properties,
+        env,
+        passives
+      );
+
+      recalculatedPIPortfolio.forecasting = forecastingRes;
+      const portfolio_ids = forecastingRes[0].passive_investments.map(
+        (p: any) => p.uid
+      );
+
+      const splitted_test = portfolio_ids.map((id: string) => {
+        const found = forecastingRes.map((pio: any) =>
+          pio.passive_investments.filter((item: any) => item.uid === id)
+        );
+        return found.flat();
+      });
+
+      recalculatedPIPortfolio.pi = splitted_test.map((po: any, idx = 0) => {
+        return {
+          name: po[0].name,
+          uid: po[0].uid,
+          investment_value: pi_investment_values[po[0].uid],
+          years: po,
+        };
+      });
+      recalculatedPIPortfolio.uuid = `pi_${recalculatedPIPortfolio.uuid}`;
       portfolios.push(recalculatedPIPortfolio);
     }
 

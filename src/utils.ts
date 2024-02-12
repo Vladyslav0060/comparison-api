@@ -40,22 +40,33 @@ const getTempVariables = (
 
 const getForecastingRequestObjects = (
   req: Request_1031_Props,
-  portfolio: PortfolioProps
+  portfolio: PortfolioProps,
+  includeBodyPI?: boolean
 ): any => {
   try {
     const { available_equity, monthly_rents, mothlyNOI } = getTempVariables(
       req,
       portfolio
     );
-    const piWithUpdatedInvestmentValue = req?.passive_investments?.[0]
-      ? [
-          {
-            ...req.passive_investments[0],
-            investment_value: available_equity,
-          },
-          ...req.passive_investments.slice(1),
-        ]
-      : null;
+
+    let piWithUpdatedInvestmentValue =
+      req?.passive_investments?.[0] || portfolio.passive_investments?.length
+        ? [
+            ...(req.passive_investments?.[0]
+              ? [
+                  {
+                    ...req.passive_investments[0],
+                    investment_value: available_equity,
+                  },
+                ]
+              : []),
+            ...(portfolio?.passive_investments || []),
+          ]
+        : null;
+    if (!includeBodyPI)
+      piWithUpdatedInvestmentValue = piWithUpdatedInvestmentValue?.filter(
+        (item: any) => item.uid !== req.passive_investments[0].uid
+      );
 
     const result = portfolio.properties.map((property) => {
       return {
@@ -115,11 +126,7 @@ const getForecastingRequestObjects = (
                 },
               ]
             : [property],
-        passive_investments:
-          portfolio.id === req.target_portfolio &&
-          property.uuid === req.target_property
-            ? piWithUpdatedInvestmentValue
-            : null,
+        passive_investments: piWithUpdatedInvestmentValue,
       };
     });
     return result;
@@ -128,7 +135,10 @@ const getForecastingRequestObjects = (
   }
 };
 
-const getForecastingBodyFromPorfolio = (properties: PropertiesProps[]) => {
+const getForecastingBodyFromPorfolio = (
+  properties: PropertiesProps[],
+  passive_investments: any
+) => {
   const result = properties.map((property) => {
     return {
       name: property.name,
@@ -171,7 +181,7 @@ const getForecastingBodyFromPorfolio = (properties: PropertiesProps[]) => {
       costToSell: 0.07,
     };
   });
-  return { array: result };
+  return { array: result, passive_investments };
 };
 
 export {

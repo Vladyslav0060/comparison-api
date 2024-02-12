@@ -62,6 +62,7 @@ export interface PortfolioProps {
   name: string;
   id: string;
   properties: PropertyPortfolioProps[];
+  passive_investments?: PassiveInvestmentProps[];
 }
 
 export interface PassiveInvestmentProps {

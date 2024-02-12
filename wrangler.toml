@@ -1,11 +1,11 @@
 account_id="926b4147f0c4510a15a7fd4cb409b0d8"
-name = "comparison-api"
+name = "test-comparison-api"
 main = "src/index.ts"
 compatibility_date = "2023-08-05"
 services = [
-  { binding = "dev_forecasting", service = "dev-portfolio-forecasting" },
+  { binding = "dev_forecasting", service = "test-portfolio-forecasting" },
   { binding = "amortization", service = "loan-amortization-worker" }
 ]
 [vars]
-FORECASTING_URL = "https://dev-portfolio-forecasting.rei-workers.workers.dev"
+FORECASTING_URL = "https://test-portfolio-forecasting.rei-workers.workers.dev"
 AMORTIZATION_URL = "https://loan-amortization-worker.rei-workers.workers.dev/"

@@ -152,8 +152,16 @@ const getPIForecasting = async (
   }
 };
 
-const getFinalForecasting = async (properties: PropertiesProps[], env: Env) => {
-  const forecastingRequestArray = getForecastingBodyFromPorfolio(properties);
+const getFinalForecasting = async (
+  properties: PropertiesProps[],
+  env: Env,
+  passive_investments: any = null
+) => {
+  const forecastingRequestArray = getForecastingBodyFromPorfolio(
+    properties,
+    passive_investments
+  );
+
   let forecatingResponse: ForecastingResponseObjectProps;
   const data = await env.dev_forecasting.fetch(env.FORECASTING_URL, {
     method: "POST",
