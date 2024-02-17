@@ -455,6 +455,11 @@ export const start = async (
           portfolio
         );
 
+        console.log(
+          "1031 forecastingRequestObjects:",
+          forecastingRequestObjects
+        );
+
         pi_investment_values =
           forecastingRequestObjects[0].passive_investments.reduce(
             (accumulator: any, r: any) => {
@@ -463,8 +468,8 @@ export const start = async (
             },
             {}
           );
-        console.log("1031", { pi_investment_values });
         if (!forecastingRequestObjects) return;
+
         const forecatingResponse = await getForecasting(
           forecastingRequestObjects,
           env
@@ -493,14 +498,35 @@ export const start = async (
           ...req.passive_investments?.[0],
           investment_value: available_equity,
         };
-
+        console.log(
+          "portfolio.passive_investments: ",
+          portfolio.passive_investments
+        );
+        console.log(
+          "piWithUpdatedInvestmentValue:",
+          piWithUpdatedInvestmentValue
+        );
         const forecastingRes = await getFinalForecasting(
           portfolio_res.properties,
           env,
-          [piWithUpdatedInvestmentValue]
+          portfolio.passive_investments
         );
-        console.log("forecastingRes 1031: ", forecastingRes);
         portfolio_res.forecasting = forecastingRes;
+        portfolio_res.pi =
+          forecastingRes[0].passive_investments?.map((f_pi_obj) => {
+            return {
+              name: f_pi_obj.name,
+              uid: f_pi_obj.uid,
+              investment_value: pi_investment_values[f_pi_obj.uid],
+              years: forecastingRes
+                .map((f_year) =>
+                  f_year.passive_investments.filter(
+                    (f) => f.uid === f_pi_obj.uid
+                  )
+                )
+                .flat(),
+            };
+          }) || null;
         return portfolio_res;
       })
     );
@@ -547,18 +573,20 @@ export const start = async (
       );
 
       recalculatedPIPortfolio.forecasting = forecastingRes;
-      const portfolio_ids = forecastingRes[0].passive_investments.map(
+      const portfolio_ids = forecastingRes[0].passive_investments?.map(
         (p: any) => p.uid
       );
 
-      const splitted_test = portfolio_ids.map((id: string) => {
-        const found = forecastingRes.map((pio: any) =>
-          pio.passive_investments.filter((item: any) => item.uid === id)
-        );
-        return found.flat();
-      });
+      const splitted_test =
+        portfolio_ids &&
+        portfolio_ids.map((id: string) => {
+          const found = forecastingRes.map((pio: any) =>
+            pio.passive_investments.filter((item: any) => item.uid === id)
+          );
+          return found.flat();
+        });
 
-      recalculatedPIPortfolio.pi = splitted_test.map((po: any, idx = 0) => {
+      recalculatedPIPortfolio.pi = splitted_test?.map((po: any, idx = 0) => {
         return {
           name: po[0].name,
           uid: po[0].uid,
