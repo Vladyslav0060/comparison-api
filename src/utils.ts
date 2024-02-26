@@ -48,7 +48,6 @@ const getForecastingRequestObjects = (
       req,
       portfolio
     );
-    console.log("req.passive_investments?.[0]: ", req.passive_investments?.[0]);
 
     let piWithUpdatedInvestmentValue =
       req?.passive_investments?.[0] || portfolio.passive_investments?.length
@@ -64,7 +63,6 @@ const getForecastingRequestObjects = (
             ...(portfolio?.passive_investments || []),
           ]
         : null;
-    console.log(portfolio.name, { piWithUpdatedInvestmentValue });
     if (!includeBodyPI && !!req.passive_investments?.[0])
       piWithUpdatedInvestmentValue = piWithUpdatedInvestmentValue?.filter(
         (item: any) => item.uid !== req.passive_investments[0].uid

@@ -528,14 +528,15 @@ const getPortolioPropertiesObjects = async (
           );
     })
   );
-  return result;
+  return result.flat();
 };
 
 const buildPortfolioResponse = (
   properties: PropertiesProps[],
   portfolio_id: string,
   portfolio_name: string,
-  isTargetPortfolio = false
+  passives: any = undefined,
+  isTargetPortfolio: boolean = false
 ) => {
   const { valuationSum, equitySum, loanBalancesSum, noiSum, cashflowSum } =
     properties.reduce(
@@ -557,6 +558,37 @@ const buildPortfolioResponse = (
       }
     );
 
+  const pi_first_year = !!passives
+    ? passives.reduce(
+        (acc, item) => {
+          const output_cashflow =
+            item.years[0]?.output_cashflow ??
+            item.investment_value * item.years[0].cashflow_grow;
+          const output_equity_grow =
+            item.years[0]?.output_equity_grow ??
+            item.investment_value * item.years[0].equity_grow;
+          return {
+            output_cashflow_sum: acc.output_cashflow_sum + output_cashflow,
+            investment_value_sum:
+              acc.investment_value_sum + item.investment_value,
+            output_equity_grow_sum:
+              acc.output_equity_grow_sum + output_equity_grow,
+          };
+        },
+        {
+          output_cashflow_sum: 0,
+          investment_value_sum: 0,
+          output_equity_grow_sum: 0,
+        }
+      )
+    : {
+        output_cashflow_sum: 0,
+        investment_value_sum: 0,
+        output_equity_grow_sum: 0,
+      };
+
+  console.log("pi_first_year: ", pi_first_year);
+
   const arbAppreciationSum = properties.reduce((acc, item) => {
     return item.arb.arbAppreciation + acc;
   }, 0);
@@ -567,11 +599,18 @@ const buildPortfolioResponse = (
     return item.arb.arbDownPayment + acc;
   }, 0);
 
+  const noi = noiSum + pi_first_year.output_cashflow_sum;
+  const cashFlow = cashflowSum + pi_first_year.output_cashflow_sum;
+  const arbAppreciation =
+    arbAppreciationSum + pi_first_year.output_equity_grow_sum;
+  const equity = equitySum + pi_first_year.investment_value_sum;
+  const valuation = valuationSum + pi_first_year.investment_value_sum;
+
   return {
     name: isTargetPortfolio ? "Refi" : portfolio_name,
-    cashFlow: cashflowSum,
+    cashFlow,
     arb: {
-      arbAppreciation: arbAppreciationSum,
+      arbAppreciation,
       arbDepreciation: arbDepreciationSum,
       arbDownPayment: arbDownpaymentSum,
       avarageCap:
@@ -587,17 +626,14 @@ const buildPortfolioResponse = (
           return item.arb.rentMultiplier + acc;
         }, 0) / properties.length,
     },
-    equity: equitySum,
+    equity,
     LTV: (loanBalancesSum / valuationSum) * 100,
     ROE:
-      (arbAppreciationSum +
-        arbDepreciationSum +
-        arbDownpaymentSum +
-        cashflowSum) /
-      equitySum,
-    NOI: noiSum,
+      (arbAppreciation + arbDepreciationSum + arbDownpaymentSum + cashFlow) /
+      equity,
+    NOI: noi,
     uuid: portfolio_id,
-    valuation: valuationSum,
+    valuation,
     properties: properties,
   };
 };
@@ -608,6 +644,7 @@ const getPortfolioResponse = async (
   amortizationResponseNonTarget: AmortizationNonTargetType,
   targetAmortization: AmortizationResponseProps | undefined,
   forecasting: any[],
+  pi_investment_values: any = {},
   env: Env
 ) => {
   const portfolioPropertiesResponse = await getPortolioPropertiesObjects(
@@ -618,10 +655,32 @@ const getPortfolioResponse = async (
     forecasting,
     env
   );
+  console.log("portfolioPropertiesResponse: ", portfolioPropertiesResponse);
+  const forecastingRes: any = await getFinalForecasting(
+    portfolioPropertiesResponse,
+    env,
+    portfolio.passive_investments
+  );
+  const pi =
+    forecastingRes[0].passive_investments?.map((f_pi_obj: any) => {
+      return {
+        name: f_pi_obj.name,
+        uid: f_pi_obj.uid,
+        investment_value: pi_investment_values[f_pi_obj.uid],
+        years: forecastingRes
+          .map((f_year: any) =>
+            f_year.passive_investments.filter(
+              (f: any) => f.uid === f_pi_obj.uid
+            )
+          )
+          .flat(),
+      };
+    }) || null;
   const portfolio_res = buildPortfolioResponse(
     portfolioPropertiesResponse.flat(),
     portfolio.id,
     portfolio.name,
+    pi,
     portfolio.id === req.target_portfolio
   );
   return portfolio_res;
@@ -657,8 +716,10 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
           req,
           portfolio
         );
+        console.log("forecastingRequestObjects: ", forecastingRequestObjects);
 
         pi_investment_values =
+          forecastingRequestObjects[0].passive_investments &&
           forecastingRequestObjects[0].passive_investments.reduce(
             (accumulator: any, r: any) => {
               accumulator[r.uid] = r.investment_value;
@@ -692,6 +753,7 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
           amortizationResponseNonTarget,
           targetAmortization,
           forecatingResponse,
+          pi_investment_values,
           env
         );
 
@@ -705,13 +767,29 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
           ...req.passive_investments?.[0],
           investment_value: available_equity,
         };
-        const forecastingRes = await getFinalForecasting(
+        const forecastingRes: any = await getFinalForecasting(
           portfolio_res.properties,
           env,
-          [piWithUpdatedInvestmentValue]
+          portfolio.passive_investments
+          // [piWithUpdatedInvestmentValue]
         );
         console.log("forecastingRes refi: ", forecastingRes);
         portfolio_res.forecasting = forecastingRes;
+        portfolio_res.pi =
+          forecastingRes[0].passive_investments?.map((f_pi_obj: any) => {
+            return {
+              name: f_pi_obj.name,
+              uid: f_pi_obj.uid,
+              investment_value: pi_investment_values[f_pi_obj.uid],
+              years: forecastingRes
+                .map((f_year: any) =>
+                  f_year.passive_investments.filter(
+                    (f: any) => f.uid === f_pi_obj.uid
+                  )
+                )
+                .flat(),
+            };
+          }) || null;
         return portfolio_res;
       })
     );
@@ -731,11 +809,25 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
       //     (po: any) => po.passive_investments
       //   );
       // }
+
+      const target_property = target_portfolio?.properties.find(
+        (p) => p.uuid === req.target_property
+      );
+      const temps = temp_vars(target_property, req);
+      const investment_value = temps?.available_equity || 0;
+      const available_equity = temps?.available_equity || 0;
+
       const recalculatedPIPortfolio: PortfolioResponseProps =
         buildPortfolioResponse(
           piObject.properties,
           piObject.uuid,
           piObject.name,
+          (piObject?.pi || []).concat(
+            {
+              ...req.passive_investments?.[0],
+              investment_value: available_equity,
+            } || []
+          ),
           false
         );
       // if (!!passive_investments_object?.[0]) {
@@ -755,12 +847,14 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
       //     (po: any) => po.passive_investments
       //   );
       // }
-      const target_property = target_portfolio?.properties.find(
-        (p) => p.uuid === req.target_property
-      );
-      const temps = temp_vars(target_property, req);
-      const investment_value = temps?.available_equity || 0;
-      const available_equity = temps?.available_equity || 0;
+
+      // const target_property = target_portfolio?.properties.find(
+      //   (p) => p.uuid === req.target_property
+      // );
+      // const temps = temp_vars(target_property, req);
+      // const investment_value = temps?.available_equity || 0;
+      // const available_equity = temps?.available_equity || 0;
+
       recalculatedPIPortfolio.valuation += investment_value;
       recalculatedPIPortfolio.equity += investment_value;
       recalculatedPIPortfolio.valuation += investment_value;
@@ -772,7 +866,8 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
 
       if (!foundPiPortfolio) return;
 
-      const passives = foundPiPortfolio.passive_investments?.concat({
+      console.log("foundPiPortfolio: ", foundPiPortfolio);
+      const passives = (foundPiPortfolio.passive_investments || [])?.concat({
         ...req.passive_investments[0],
         investment_value: available_equity,
       });
@@ -784,6 +879,8 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
       );
 
       recalculatedPIPortfolio.forecasting = forecastingRes;
+      console.log("forecastingRes: ", forecastingRes);
+
       const portfolio_ids = forecastingRes[0].passive_investments.map(
         (p: any) => p.uid
       );
@@ -799,7 +896,7 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
         return {
           name: po[0].name,
           uid: po[0].uid,
-          investment_value: pi_investment_values[po[0].uid],
+          investment_value: pi_investment_values[po[0].uid] || available_equity,
           years: po,
         };
       });
