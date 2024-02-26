@@ -441,7 +441,6 @@ const getPortfolioResponse = async (
   amortizationResponseNonTarget: AmortizationNonTargetType,
   targetAmortization: AmortizationResponseProps | undefined,
   forecasting: any[],
-  pi_investment_values: any = {},
   env: Env
 ) => {
   const portfolioPropertiesResponse = getPortolioPropertiesObjects(
@@ -471,7 +470,10 @@ const getPortfolioResponse = async (
       return {
         name: f_pi_obj.name,
         uid: f_pi_obj.uid,
-        investment_value: pi_investment_values[f_pi_obj.uid],
+        investment_value: portfolio.passive_investments?.find(
+          (pi) => pi.uid === f_pi_obj.uid
+        )?.investment_value,
+        // investment_value: pi_investment_values[f_pi_obj.uid],
         years: forecastingRes
           .map((f_year: any) =>
             f_year.passive_investments.filter(
@@ -524,22 +526,16 @@ export const start = async (
           portfolio
         );
 
-        console.log("forecastingRequestObjects: ", forecastingRequestObjects);
+        // pi_investment_values =
+        //   forecastingRequestObjects[0].passive_investments &&
+        //   forecastingRequestObjects[0].passive_investments.reduce(
+        //     (accumulator: any, r: any) => {
+        //       accumulator[r.uid] = r.investment_value;
+        //       return accumulator;
+        //     },
+        //     {}
+        //   );
 
-        pi_investment_values =
-          forecastingRequestObjects[0].passive_investments &&
-          forecastingRequestObjects[0].passive_investments.reduce(
-            (accumulator: any, r: any) => {
-              accumulator[r.uid] = r.investment_value;
-              return accumulator;
-            },
-            {}
-          );
-
-        console.log(
-          "forecastingRequestObjects[0].passive_investments: ",
-          forecastingRequestObjects
-        );
         if (!forecastingRequestObjects) return;
 
         const forecatingResponse = await getForecasting(
@@ -564,14 +560,13 @@ export const start = async (
           amortizationResponseNonTarget,
           targetAmortization,
           forecatingResponse,
-          pi_investment_values,
           env
         );
         const { available_equity } = getTempVariables(req);
-        const piWithUpdatedInvestmentValue = {
-          ...req.passive_investments?.[0],
-          investment_value: available_equity,
-        };
+        // const piWithUpdatedInvestmentValue = {
+        //   ...req.passive_investments?.[0],
+        //   investment_value: available_equity,
+        // };
 
         const forecastingRes: any = await getFinalForecasting(
           portfolio_res.properties,
@@ -585,7 +580,9 @@ export const start = async (
             return {
               name: f_pi_obj.name,
               uid: f_pi_obj.uid,
-              // investment_value: pi_investment_values[f_pi_obj.uid],
+              investment_value: portfolio.passive_investments?.find(
+                (pi) => pi.uid === f_pi_obj.uid
+              )?.investment_value,
               years: forecastingRes
                 .map((f_year: any) =>
                   f_year.passive_investments.filter(
@@ -610,7 +607,6 @@ export const start = async (
         (prop) => prop.uid !== "new_investment"
       );
       const temps = getTempVariables(req);
-
       const recalculatedPIPortfolio: PortfolioResponseProps =
         buildPortfolioResponse(
           piObject.properties,
@@ -660,13 +656,19 @@ export const start = async (
           );
           return found.flat();
         });
-
+      const bodyPiPortfolioName = req.passive_investments?.[0].name;
       recalculatedPIPortfolio.pi = splitted_test?.map((po: any, idx = 0) => {
-        console.log("f_pi_obj.uid: ", po[0].uid);
         return {
           name: po[0].name,
           uid: po[0].uid,
-          investment_value: pi_investment_values[po[0].uid] || available_equity,
+          // investment_value: 0,
+          investment_value:
+            po[0].name === bodyPiPortfolioName
+              ? available_equity
+              : foundPiPortfolio.passive_investments?.find(
+                  (p) => p.uid === po[0].uid
+                )?.investment_value,
+          // investment_value: pi_investment_values[po[0].uid] || available_equity,
           years: po,
         };
       });
