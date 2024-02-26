@@ -386,7 +386,6 @@ const buildPortfolioResponse = (
         output_equity_grow_sum: 0,
       };
 
-  console.log("pi_first_year: ", pi_first_year);
   const arbAppreciationSum = properties.reduce((acc, item) => {
     return item.arb.arbAppreciation + acc;
   }, 0);
@@ -595,7 +594,7 @@ export const start = async (
         return portfolio_res;
       })
     );
-    console.log("works");
+
     let piObject = portfolios.find(
       (portfolio) =>
         portfolio?.name === "1031 Exchange" && req.passive_investments?.[0]

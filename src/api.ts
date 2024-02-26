@@ -161,7 +161,6 @@ const getFinalForecasting = async (
     properties,
     passive_investments
   );
-  console.log("forecastingRequestArray: ", forecastingRequestArray);
   let forecatingResponse: ForecastingResponseObjectProps;
   const data = await env.dev_forecasting.fetch(env.FORECASTING_URL, {
     method: "POST",

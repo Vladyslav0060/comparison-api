@@ -587,8 +587,6 @@ const buildPortfolioResponse = (
         output_equity_grow_sum: 0,
       };
 
-  console.log("pi_first_year: ", pi_first_year);
-
   const arbAppreciationSum = properties.reduce((acc, item) => {
     return item.arb.arbAppreciation + acc;
   }, 0);
@@ -654,7 +652,7 @@ const getPortfolioResponse = async (
     forecasting,
     env
   );
-  console.log("portfolioPropertiesResponse: ", portfolioPropertiesResponse);
+
   const forecastingRes: any = await getFinalForecasting(
     portfolioPropertiesResponse,
     env,
@@ -716,7 +714,6 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
           req,
           portfolio
         );
-        console.log("forecastingRequestObjects: ", forecastingRequestObjects);
 
         // pi_investment_values =
         //   forecastingRequestObjects[0].passive_investments &&
@@ -770,7 +767,6 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
           portfolio.passive_investments
           // [piWithUpdatedInvestmentValue]
         );
-        console.log("forecastingRes refi: ", forecastingRes);
         portfolio_res.forecasting = forecastingRes;
         portfolio_res.pi =
           forecastingRes[0].passive_investments?.map((f_pi_obj: any) => {
@@ -865,7 +861,6 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
 
       if (!foundPiPortfolio) return;
 
-      console.log("foundPiPortfolio: ", foundPiPortfolio);
       const passives = (foundPiPortfolio.passive_investments || [])?.concat({
         ...req.passive_investments[0],
         investment_value: available_equity,
@@ -878,7 +873,6 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
       );
 
       recalculatedPIPortfolio.forecasting = forecastingRes;
-      console.log("forecastingRes: ", forecastingRes);
 
       const portfolio_ids = forecastingRes[0].passive_investments.map(
         (p: any) => p.uid

@@ -232,8 +232,6 @@ const buildPortfolioResponse = (
         output_equity_grow_sum: 0,
       };
 
-  console.log("pi_first_year: ", pi_first_year);
-
   const arbAppreciationSum = properties.reduce((acc, item) => {
     return item.arb.arbAppreciation + acc;
   }, 0);
@@ -300,7 +298,6 @@ const getPortfolioResponse = async (
     forecasting
   );
 
-  console.log("portfolioPropertiesResponse: ", portfolioPropertiesResponse);
   const forecastingRes: any = await getFinalForecasting(
     portfolioPropertiesResponse,
     env,
