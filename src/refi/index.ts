@@ -809,7 +809,6 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
         (p) => p.uuid === req.target_property
       );
       const temps = temp_vars(target_property, req);
-      const investment_value = temps?.available_equity || 0;
       const available_equity = temps?.available_equity || 0;
 
       const recalculatedPIPortfolio: PortfolioResponseProps =
@@ -850,9 +849,6 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
       // const investment_value = temps?.available_equity || 0;
       // const available_equity = temps?.available_equity || 0;
 
-      recalculatedPIPortfolio.valuation += investment_value;
-      recalculatedPIPortfolio.equity += investment_value;
-      recalculatedPIPortfolio.valuation += investment_value;
       // recalculatedPIPortfolio.forecasting = piObject?.forecasting;
 
       const foundPiPortfolio = req.portfolios.find(

@@ -11,7 +11,6 @@ async function fetch(request: Request, env: Env, ctx: ExecutionContext) {
       );
     let response;
     const body: Request_1031_Props = await request.json();
-    console.log("reseived body: ", body);
     switch (body.scenario_type) {
       case "1031":
         response = await start(body, env);
