@@ -205,7 +205,7 @@ const buildPortfolioResponse = (
     );
   const pi_first_year = !!passives
     ? passives.reduce(
-        (acc, item) => {
+        (acc: any, item: any) => {
           const output_cashflow =
             item.years[0]?.output_cashflow ??
             item.investment_value * item.years[0].cashflow_grow;
@@ -287,7 +287,6 @@ const getPortfolioResponse = async (
   amortizationResponseNonTarget: AmortizationNonTargetType,
   targetAmortization: AmortizationResponseProps | undefined,
   forecasting: any[],
-  pi_investment_values: any = {},
   env: Env
 ) => {
   const portfolioPropertiesResponse = getPortolioPropertiesObjects(
@@ -297,18 +296,33 @@ const getPortfolioResponse = async (
     targetAmortization,
     forecasting
   );
+  const { available_equity } = getTempVariables(req);
+
+  const passives =
+    portfolio.id === req.target_portfolio
+      ? [
+          ...(portfolio.passive_investments || []),
+          ...req.passive_investments.map((body_pi) => ({
+            ...body_pi,
+            investment_value: available_equity,
+          })),
+        ]
+      : portfolio.passive_investments || [];
 
   const forecastingRes: any = await getFinalForecasting(
     portfolioPropertiesResponse,
     env,
-    portfolio.passive_investments
+    passives
   );
+
   const pi =
     forecastingRes[0].passive_investments?.map((f_pi_obj: any) => {
       return {
         name: f_pi_obj.name,
         uid: f_pi_obj.uid,
-        investment_value: pi_investment_values[f_pi_obj.uid],
+        investment_value: passives.find(
+          (passive) => passive.uid === f_pi_obj.uid
+        )?.investment_value,
         years: forecastingRes
           .map((f_year: any) =>
             f_year.passive_investments.filter(
@@ -326,6 +340,8 @@ const getPortfolioResponse = async (
     pi,
     portfolio.id === req.target_portfolio
   );
+  portfolio_res.pi = pi;
+  portfolio_res.forecasting = forecastingRes;
   return portfolio_res;
 };
 
@@ -352,24 +368,27 @@ export const startPI = async (
     }
 
     const targetAmortization = await getAmortization(req, env);
-    let pi_investment_values: any = [];
+    const modifiedReqPortfolios = req.portfolios.map((portfolio) => {
+      if (portfolio.id === req.target_portfolio) {
+        const updatedProperties = portfolio.properties.filter(
+          (p) => p.uuid !== req.target_property
+        );
+
+        return {
+          ...portfolio,
+          properties: updatedProperties,
+        };
+      }
+      return portfolio;
+    });
+
     const portfolios = await Promise.all(
-      req.portfolios.map(async (portfolio, idx = 0) => {
+      modifiedReqPortfolios.map(async (portfolio, idx = 0) => {
         const forecastingRequestObjects = await getForecastingRequestObjects(
           req,
           portfolio,
           portfolio.id === req.target_portfolio
         );
-
-        pi_investment_values = pi_investment_values =
-          forecastingRequestObjects[0].passive_investments &&
-          forecastingRequestObjects[0].passive_investments.reduce(
-            (accumulator: any, r: any) => {
-              accumulator[r.uid] = r.investment_value;
-              return accumulator;
-            },
-            {}
-          );
         if (!forecastingRequestObjects) return;
         const forecatingResponse = await getForecasting(
           forecastingRequestObjects,
@@ -383,65 +402,12 @@ export const startPI = async (
           amortizationResponseNonTarget,
           targetAmortization,
           forecatingResponse,
-          pi_investment_values,
           env
         );
-
-        const passives =
-          portfolio.id === req.target_portfolio
-            ? [
-                ...(portfolio.passive_investments || []),
-                ...req.passive_investments,
-              ]
-            : portfolio.passive_investments || [];
-
-        const forecastingRes: any = await getFinalForecasting(
-          portfolio_res.properties,
-          env,
-          passives
-        );
-        portfolio_res.forecasting = forecastingRes;
-
-        const portfolio_ids = forecastingRes[0].passive_investments?.map(
-          (p: any) => p.uid
-        );
-
-        const splitted_test =
-          portfolio_ids &&
-          portfolio_ids.map((id: string) => {
-            const found = forecastingRes.map((pio: any) =>
-              pio.passive_investments.filter((item: any) => item.uid === id)
-            );
-            return found.flat();
-          });
-        const { available_equity = 0 } = getTempVariables(req);
-        const target_body_pi_id = req.passive_investments[0].uid;
-        portfolio_res.pi = splitted_test?.map((po: any, idx = 0) => {
-          return {
-            name: po[0].name,
-            uid: po[0].uid,
-            investment_value:
-              po[0].uid === target_body_pi_id
-                ? available_equity
-                : pi_investment_values[po[0].uid],
-            years: po,
-          };
-        });
-
-        if (portfolio_res.uuid === req.target_portfolio) {
-          portfolio_res.properties = portfolio_res.properties.filter(
-            (prop) => prop.uid !== req.target_property
-          );
-        }
         return portfolio_res;
       })
     );
-    const { available_equity = 0 } = getTempVariables(req);
-    const piPortfolio = portfolios.find((p) => p?.name === "PI Exchange");
-    if (piPortfolio) {
-      piPortfolio.equity += available_equity;
-      piPortfolio.valuation += available_equity;
-    }
+
     const response: ComparisonResponseObjectProps = {
       comparison: {
         "new-investemnt-id": req.target_property,
