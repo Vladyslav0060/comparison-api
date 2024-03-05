@@ -379,12 +379,15 @@ async function getTargetProperty(
           monthlyPayment: refiAmortization.summary.monthlyPayment,
         },
         assumptions: {
-          expenseInflation: req.default_values.new_expensInflation,
-          rentalGrowth: req.default_values.new_rentalGrowth,
-          appreciation: req.default_values.new_appreciation,
-          maintenance: req.default_values.new_maintenance,
-          vacancy: req.default_values.new_vacancy,
-          management: req.default_values.new_management,
+          expenseInflation: refinanced_target.annualOperatingExpenseIncrease,
+          rentalGrowth: refinanced_target.annualRevenueIncrease,
+          appreciation: refinanced_target.annualAppreciationRate,
+          maintenance:
+            refinanced_target.allExpenses.capEx / refinanced_target.avgRent,
+          vacancy: refinanced_target.vacancyLossPercentage,
+          management:
+            refinanced_target.allExpenses.propManage /
+            refinanced_target.avgRent,
         },
         acquisition: {
           totalCashOutlay: rt_totalcashoutlay,
