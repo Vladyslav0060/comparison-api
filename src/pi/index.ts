@@ -256,10 +256,7 @@ const buildPortfolioResponse = (
       arbAppreciation,
       arbDepreciation: arbDepreciationSum,
       arbDownPayment: arbDownpaymentSum,
-      avarageCap:
-        properties.reduce((acc, item) => {
-          return item.arb.avarageCap + acc;
-        }, 0) / properties.length,
+      avarageCap: noi / valuation,
       cashOnCash:
         properties.reduce((acc, item) => {
           return item.arb.cashOnCash + acc;
