@@ -16,7 +16,10 @@ import {
   Request_1031_Props,
   ComparisonResponseObjectProps,
 } from "../types/types";
-import { getForecastingRequestObjects } from "../utils";
+import {
+  getForecastingRequestObjects,
+  sortPortfoliosTargetFirst,
+} from "../utils";
 
 const getTempVariables = (req: Request_1031_Props) => {
   const targetPortfolio = req.portfolios.find(
@@ -403,7 +406,12 @@ export const startPI = async (
         );
         return portfolio_res;
       })
+    ).then((results) =>
+      results.filter(
+        (result): result is PortfolioResponseProps => result !== undefined
+      )
     );
+    if (!portfolios) throw new Error("Portfolios are not found");
 
     const response: ComparisonResponseObjectProps = {
       comparison: {
@@ -411,7 +419,7 @@ export const startPI = async (
         target_portfolio: req.target_portfolio,
         target_property: req.target_property,
         refinanced_property: req.target_property,
-        portfolios: portfolios,
+        portfolios: portfolios.sort(sortPortfoliosTargetFirst),
       },
     };
 

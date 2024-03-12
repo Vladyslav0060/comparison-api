@@ -16,7 +16,10 @@ import {
   PropertiesProps,
 } from "../types/types";
 import { Request_1031_Props, PortfolioForecastingProps } from "../types/types";
-import { getForecastingRequestObjects, getTempVariables } from "../utils";
+import {
+  getForecastingRequestObjects,
+  sortPortfoliosTargetFirst,
+} from "../utils";
 
 type TempVarsProps = {
   available_equity: number;
@@ -540,7 +543,7 @@ const buildPortfolioResponse = (
   portfolio_name: string,
   passives: any = undefined,
   isTargetPortfolio: boolean = false
-) => {
+): PortfolioResponseProps => {
   const { valuationSum, equitySum, loanBalancesSum, noiSum, cashflowSum } =
     properties.reduce(
       (acc, item) => {
@@ -563,7 +566,7 @@ const buildPortfolioResponse = (
 
   const pi_first_year = !!passives
     ? passives.reduce(
-        (acc, item) => {
+        (acc: any, item: any) => {
           const output_cashflow =
             item.years[0]?.output_cashflow ??
             item.investment_value * item.years[0].cashflow_grow;
@@ -643,7 +646,7 @@ const getPortfolioResponse = async (
   targetAmortization: AmortizationResponseProps | undefined,
   forecasting: any[],
   env: Env
-) => {
+): Promise<PortfolioResponseProps> => {
   const portfolioPropertiesResponse = await getPortolioPropertiesObjects(
     req,
     portfolio,
@@ -742,7 +745,7 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
         const amortizationResponseNonTarget: AmortizationNonTargetType =
           await getAmortizationNonTarget(portfolio, env);
 
-        const portfolio_res: any = await getPortfolioResponse(
+        const portfolio_res = await getPortfolioResponse(
           req,
           portfolio,
           amortizationResponseNonTarget,
@@ -787,7 +790,12 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
           }) || null;
         return portfolio_res;
       })
+    ).then((results) =>
+      results.filter(
+        (result): result is PortfolioResponseProps => result !== undefined
+      )
     );
+    if (!portfolios) throw new Error("Portfolios are not found");
 
     let piObject = portfolios.find(
       (portfolio) => portfolio?.name === "Refi" && req.passive_investments?.[0]
@@ -799,11 +807,6 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
       piObject.properties = piObject.properties.filter(
         (prop: any) => prop.uid !== "new_investment"
       );
-      // if (!!passive_investments_object?.[0].passive_investments) {
-      //   piObject.pi = passive_investments_object.map(
-      //     (po: any) => po.passive_investments
-      //   );
-      // }
 
       const target_property = target_portfolio?.properties.find(
         (p) => p.uuid === req.target_property
@@ -824,32 +827,6 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
           ),
           false
         );
-      // if (!!passive_investments_object?.[0]) {
-      //   recalculatedPIPortfolio.pi = [
-      //     {
-      //       name: req.passive_investments[0].name,
-      //       uid: req.passive_investments[0].uid,
-      //       years: passive_investments_object.map(
-      //         (po: any) => po.passive_investments
-      //       ),
-      //     },
-      //   ];
-      // }
-
-      // if (!!passive_investments_object?.[0].passive_investments) {
-      //   recalculatedPIPortfolio.pi = passive_investments_object.map(
-      //     (po: any) => po.passive_investments
-      //   );
-      // }
-
-      // const target_property = target_portfolio?.properties.find(
-      //   (p) => p.uuid === req.target_property
-      // );
-      // const temps = temp_vars(target_property, req);
-      // const investment_value = temps?.available_equity || 0;
-      // const available_equity = temps?.available_equity || 0;
-
-      // recalculatedPIPortfolio.forecasting = piObject?.forecasting;
 
       const foundPiPortfolio = req.portfolios.find(
         (p) => p.id === recalculatedPIPortfolio.uuid
@@ -905,7 +882,7 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
         target_portfolio: req.target_portfolio,
         target_property: req.target_property,
         refinanced_property: req.target_property,
-        portfolios: portfolios,
+        portfolios: portfolios.sort(sortPortfoliosTargetFirst),
       },
     };
     return response;

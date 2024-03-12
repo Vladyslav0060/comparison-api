@@ -5,6 +5,7 @@ import {
   PortfolioProps,
   RequestForecastingProps,
   PropertiesProps,
+  PortfolioResponseProps,
 } from "./types/types";
 import { getAmortization, getAmortizationNonTarget } from "./api";
 
@@ -185,8 +186,22 @@ const getForecastingBodyFromPorfolio = (
   return { array: result, passive_investments };
 };
 
+const sortPortfoliosTargetFirst = (
+  a: PortfolioResponseProps,
+  b: PortfolioResponseProps
+) => {
+  if (a.name === "My Portfolio") {
+    return -1;
+  } else if (b.name === "My Portfolio") {
+    return 1;
+  } else {
+    return 0;
+  }
+};
+
 export {
   getTempVariables,
   getForecastingRequestObjects,
   getForecastingBodyFromPorfolio,
+  sortPortfoliosTargetFirst,
 };

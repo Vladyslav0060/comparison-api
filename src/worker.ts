@@ -19,6 +19,7 @@ import {
 import {
   getForecastingBodyFromPorfolio,
   getForecastingRequestObjects,
+  sortPortfoliosTargetFirst,
 } from "./utils";
 
 const getTempVariables = (req: Request_1031_Props) => {
@@ -359,7 +360,7 @@ const buildPortfolioResponse = (
     );
   const pi_first_year = !!passives
     ? passives.reduce(
-        (acc, item) => {
+        (acc: any, item: any) => {
           const output_cashflow =
             item.years[0]?.output_cashflow ??
             item.investment_value * item.years[0].cashflow_grow;
@@ -590,8 +591,12 @@ export const start = async (
           }) || null;
         return portfolio_res;
       })
+    ).then((results) =>
+      results.filter(
+        (result): result is PortfolioResponseProps => result !== undefined
+      )
     );
-
+    if (!portfolios) throw new Error("Portfolios are not found");
     let piObject = portfolios.find(
       (portfolio) =>
         portfolio?.name === "1031 Exchange" && req.passive_investments?.[0]
@@ -673,7 +678,7 @@ export const start = async (
         target_portfolio: req.target_portfolio,
         target_property: req.target_property,
         refinanced_property: req.target_property,
-        portfolios: portfolios,
+        portfolios: portfolios.sort(sortPortfoliosTargetFirst),
       },
     };
 
