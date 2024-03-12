@@ -882,7 +882,9 @@ export const startRefi = async (req: Request_1031_Props, env: Env) => {
         target_portfolio: req.target_portfolio,
         target_property: req.target_property,
         refinanced_property: req.target_property,
-        portfolios: portfolios.sort(sortPortfoliosTargetFirst),
+        portfolios: portfolios.sort(
+          sortPortfoliosTargetFirst(`clone-${req.target_portfolio}`)
+        ),
       },
     };
     return response;

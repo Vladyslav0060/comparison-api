@@ -186,18 +186,17 @@ const getForecastingBodyFromPorfolio = (
   return { array: result, passive_investments };
 };
 
-const sortPortfoliosTargetFirst = (
-  a: PortfolioResponseProps,
-  b: PortfolioResponseProps
-) => {
-  if (a.name === "My Portfolio") {
-    return -1;
-  } else if (b.name === "My Portfolio") {
-    return 1;
-  } else {
-    return 0;
-  }
-};
+const sortPortfoliosTargetFirst =
+  (target_portfolio_id: string = "") =>
+  (a: PortfolioResponseProps, b: PortfolioResponseProps) => {
+    if (a.uuid === target_portfolio_id) {
+      return -1;
+    } else if (b.uuid === target_portfolio_id) {
+      return 1;
+    } else {
+      return 0;
+    }
+  };
 
 export {
   getTempVariables,
